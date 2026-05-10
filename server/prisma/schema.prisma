@@ -178,7 +178,7 @@ model UserSubscription {
   user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan SubscriptionPlan @relation(fields: [planId], references: [id])
 
-  @@map("user_subscriptions")
+  @@map("user_subscriptions") 
 }
 
 model BillingRecord {
