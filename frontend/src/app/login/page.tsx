@@ -75,7 +75,7 @@ export default function LoginPage() {
               required
               className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-text outline-none focus:border-accent/50"
               placeholder="••••••••"
-            />
+            /> 
           </div>
 
           <button
