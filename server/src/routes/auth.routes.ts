@@ -60,7 +60,7 @@ router.get("/profile", authenticate, async (req: AuthRequest, res: Response, nex
     const profile = await getUserProfile(req.user!.userId);
     res.json(profile);
   } catch (err) {
-    next(err);
+    next(err); 
   }
 });
 
