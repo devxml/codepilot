@@ -3,7 +3,7 @@ import { env } from "./config/env";
 import { prisma } from "./lib/prisma";
 
 async function main() {
-  try {  
+  try {   
     await prisma.$connect();
     console.log("Database connected");
 
