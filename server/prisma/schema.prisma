@@ -173,7 +173,7 @@ model UserSubscription {
   currentPeriodEnd   DateTime? @map("current_period_end")
   chatsUsedThisMonth Int       @default(0) @map("chats_used_this_month")
   createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at") 
 
   user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan SubscriptionPlan @relation(fields: [planId], references: [id])
