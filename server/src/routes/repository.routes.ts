@@ -92,7 +92,7 @@ router.get("/:id/files/*", async (req: AuthRequest, res, next) => {
     next(err);
   }
 });
-
+ 
 router.get("/:id/search", async (req: AuthRequest, res, next) => {
   try {
     const q = (req.query.q as string) || "";
