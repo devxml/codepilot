@@ -54,7 +54,7 @@ router.post(
     }
   },
 );
-
+ 
 router.get("/profile", authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const profile = await getUserProfile(req.user!.userId);
