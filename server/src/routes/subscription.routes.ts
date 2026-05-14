@@ -9,7 +9,7 @@ import {
   getBillingHistory,
 } from "../services/subscription.service";
 
-const router = Router();
+const router = Router(); 
 
 router.get("/plans", async (_req, res, next) => {
   try {
