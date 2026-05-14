@@ -9,7 +9,7 @@ export interface AuthPayload {
 }
 
 export interface AuthRequest extends Request {
-  user?: AuthPayload;
+  user?: AuthPayload; 
 }
 
 export function authenticate(req: AuthRequest, _res: Response, next: NextFunction): void {
