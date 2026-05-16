@@ -10,7 +10,7 @@ router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const stats = await getDashboardStats(req.user!.userId);
     res.json(stats);
-  } catch (err) { 
+  } catch (err) {   
     next(err);
   }
 });
