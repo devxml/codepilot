@@ -130,7 +130,7 @@ router.post("/:sessionId/stream", async (req: AuthRequest, res, next) => {
       }
     }
 
-    await onComplete(fullAnswer.trim(), agentsUsed);
+    await onComplete(fullAnswer.trim(), agentsUsed); 
     res.end();
   } catch (err) {
     next(err);
