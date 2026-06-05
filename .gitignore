@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+
+# Env — never commit secrets
+.env
+backend/.env
+
+# Docker volumes
+postgres_data/
+
+# Uploads (temp files)
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
