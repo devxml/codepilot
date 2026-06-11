@@ -15,7 +15,6 @@ An AI-powered code analysis tool. Upload a GitHub repo or ZIP file, ask question
 | **Conversation Memory** | Last 5 exchanges injected into every prompt |
 | **Docker** | One command: `docker compose up` |
 
----
 
 ---
 
