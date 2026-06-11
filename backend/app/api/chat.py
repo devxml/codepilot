@@ -1,7 +1,3 @@
-"""
-backend/app/api/chat.py
-Chat endpoint — runs the LangGraph agent pipeline and streams the response via SSE.
-"""
 import json
 import asyncio
 import uuid
@@ -96,7 +92,16 @@ async def event_stream(
     try:
         final_state: AgentState = await loop.run_in_executor(None, run_graph)
     except Exception as e:
-        yield sse("error", {"message": str(e)})
+        message = str(e)
+        status_code = getattr(e, "status_code", None)
+
+        if status_code in (413, 429) or "rate_limit_exceeded" in message or "too large for model" in message:
+            message = (
+                "The request hit Groq’s token/rate limit. "
+                "Please try a smaller query or reduce the code context, then retry."
+            )
+
+        yield sse("error", {"message": message})
         return
 
     # Stream status updates first

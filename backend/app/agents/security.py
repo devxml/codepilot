@@ -1,7 +1,3 @@
-"""
-backend/app/agents/security.py
-Security Agent — scans retrieved chunks for common vulnerabilities.
-"""
 from groq import Groq
 from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
@@ -71,7 +67,7 @@ def security_node(state: AgentState) -> AgentState:
                 ),
             }
         ],
-        max_tokens=2048,
+        max_tokens=900,
         temperature=0.1,
     )
 

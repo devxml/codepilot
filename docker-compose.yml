@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
 
+  # ─── PostgreSQL ────────────────────────────────────────────────
   db:
     image: postgres:15-alpine
     restart: unless-stopped
@@ -19,6 +20,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # ─── FastAPI Backend ───────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -29,7 +31,7 @@ services:
     env_file:
       - ./backend/.env
     volumes:
-      - ./backend:/app
+      - ./backend:/app          # hot-reload in dev
       - /tmp/ai_copilot_uploads:/tmp/uploads
     depends_on:
       db:
@@ -37,6 +39,19 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/ai_copilot
       UPLOAD_DIR: /tmp/uploads
+
+  # ─── Next.js Frontend ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

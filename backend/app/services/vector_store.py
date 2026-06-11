@@ -1,7 +1,3 @@
-"""
-backend/app/services/vector_store.py
-Pinecone integration — index creation, upsert, and similarity search.
-"""
 from typing import List, Dict, Any
 from pinecone import Pinecone, ServerlessSpec
 from backend.app.core.config import get_settings

@@ -1,9 +1,3 @@
-"""
-backend/app/services/embedder.py
-Local embedding service using sentence-transformers all-MiniLM-L6-v2.
-Runs entirely offline — no API calls, no cost.
-Dimension: 384, Metric: cosine.
-"""
 from typing import List
 from functools import lru_cache
 from sentence_transformers import SentenceTransformer

@@ -1,22 +1,3 @@
-"""
-backend/app/agents/graph.py
-Builds and compiles the LangGraph multi-agent state graph.
-
-Graph topology:
-    START
-      ↓
-    retrieval          ← always runs first to fetch context
-      ↓
-    planner            ← decides which analysis agents to run
-      ↓
-    code_analysis      ← runs if planner chose it (else passes through)
-      ↓
-    security           ← runs if planner chose it (else passes through)
-      ↓
-    report             ← always runs to compose final answer
-      ↓
-    END
-"""
 from langgraph.graph import StateGraph, START, END
 from backend.app.agents.state import AgentState
 from backend.app.agents.retrieval import retrieval_node

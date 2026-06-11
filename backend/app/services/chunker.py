@@ -1,8 +1,3 @@
-"""
-backend/app/services/chunker.py
-Splits source-file content into overlapping token-based chunks.
-Uses tiktoken for accurate token counting.
-"""
 from typing import List
 import tiktoken
 

@@ -1,8 +1,3 @@
-"""
-backend/app/services/ingestion.py
-Orchestrates the full ingestion pipeline:
-  upload → extract/clone → walk files → chunk → embed → upsert Pinecone → save DB
-"""
 import os
 import shutil
 import zipfile

@@ -1,7 +1,3 @@
-"""
-backend/app/agents/state.py
-Defines the shared state dictionary that flows through every LangGraph node.
-"""
 from typing import TypedDict, List, Optional
 
 

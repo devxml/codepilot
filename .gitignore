@@ -6,12 +6,20 @@ __pycache__/
 venv/
 dist/
 build/
+*.egg
 .mypy_cache/
 .pytest_cache/
 
-# Env — never commit secrets
+# Env files 
 .env
 backend/.env
+frontend/.env.local
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
 
 # Docker volumes
 postgres_data/

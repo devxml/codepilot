@@ -1,8 +1,3 @@
-"""
-backend/app/agents/planner.py
-Planner Agent — reads the user query and decides which agents to invoke.
-Returns a comma-separated string of agent names.
-"""
 from groq import Groq
 from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
@@ -42,7 +37,7 @@ def planner_node(state: AgentState) -> AgentState:
         messages=[
             {"role": "user", "content": PLANNER_PROMPT.format(query=query)}
         ],
-        max_tokens=50,
+        max_tokens=32,
         temperature=0.0,
     )
     decision = response.choices[0].message.content.strip().lower()

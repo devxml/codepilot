@@ -1,7 +1,3 @@
-"""
-backend/app/db/session.py
-Async SQLAlchemy engine and session factory.
-"""
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from backend.app.core.config import get_settings
 

@@ -1,56 +1,102 @@
-# codepilot
+# 🤖 AI Software Engineering Copilot
 
-A AI-powered code analysis API. Upload a GitHub repo or ZIP file and query it in plain English — the system retrieves semantically relevant code chunks and runs a multi-agent LangGraph pipeline to generate answers, streamed live via SSE.
+An AI-powered code analysis tool. Upload a GitHub repo or ZIP file, ask questions in plain English, and get intelligent answers powered by a multi-agent LangGraph pipeline, semantic search (Pinecone), and Groq's blazing-fast LLMs — streamed live to your browser.
 
 ---
 
-## Tech Stack
+## ✨ Features
 
-| Layer | Technology |
+| Feature | Details |
 |---|---|
-| API | FastAPI, Python 3.11 |
-| Database | PostgreSQL 15, SQLAlchemy (async) |
-| Embeddings | sentence-transformers `all-MiniLM-L6-v2` (local, 384-dim) |
-| Vector DB | Pinecone (free serverless, cosine similarity) |
-| LLM | Groq (`qwen/qwen3-32b`) |
-| Agents | LangGraph |
-| Streaming | Server-Sent Events (SSE) |
-| Container | Docker + docker-compose |
+| **Repo Ingestion** | GitHub clone or ZIP upload |
+| **Semantic Search** | sentence-transformers + Pinecone cosine similarity |
+| **Multi-Agent AI** | Planner → Retrieval → Code Analysis / Security → Report |
+| **SSE Streaming** | Live word-by-word response in the UI |
+| **Conversation Memory** | Last 5 exchanges injected into every prompt |
+| **Docker** | One command: `docker compose up` |
 
 ---
 
-## Project Structure
+---
+
+## 📸 Screenshots
+
+### GitHub Repository Upload
+
+![GitHub Repository Upload](./assets/screenshots/githuburlupload.png)
+
+Import repositories directly using a GitHub URL or upload a ZIP file for analysis.
+
+---
+
+### Chat Interface
+
+![Chat Interface](./assets/screenshots/chatsection.png)
+
+Ask questions about the codebase in plain English and receive intelligent, context-aware answers powered by semantic search and AI agents.
+
+---
+
+### Real-Time SSE Streaming
+
+![SSE Streaming Response](./assets/screenshots/SSEresponse.png)
+
+Responses are streamed live to the browser using Server-Sent Events (SSE), providing a smooth and interactive chat experience.
+
+---
+
+## 📁 Project Structure
 
 ```
 ai-copilot/
 ├── backend/
 │   ├── app/
 │   │   ├── agents/
-│   │   │   ├── state.py            
-│   │   │   ├── graph.py           
-│   │   │   ├── planner.py         
-│   │   │   ├── retrieval.py        
-│   │   │   ├── code_analysis.py    
-│   │   │   ├── security.py         
-│   │   │   └── report.py           
+│   │   │   ├── state.py          ← Shared LangGraph state TypedDict
+│   │   │   ├── graph.py          ← Compiled LangGraph graph
+│   │   │   ├── planner.py        ← Decides which agents to run
+│   │   │   ├── retrieval.py      ← Embeds query + fetches Pinecone chunks
+│   │   │   ├── code_analysis.py  ← Explains code / architecture
+│   │   │   ├── security.py       ← Finds vulnerabilities
+│   │   │   └── report.py         ← Composes final markdown answer
 │   │   ├── api/
-│   │   │   ├── upload.py           
-│   │   │   └── chat.py             
+│   │   │   ├── upload.py         ← ZIP / GitHub ingestion endpoints
+│   │   │   └── chat.py           ← SSE streaming chat endpoint
 │   │   ├── core/
-│   │   │   └── config.py           
+│   │   │   └── config.py         ← Pydantic settings from .env
 │   │   ├── db/
-│   │   │   ├── models.py           
-│   │   │   └── session.py          
+│   │   │   ├── models.py         ← SQLAlchemy ORM models
+│   │   │   └── session.py        ← Async engine + session factory
 │   │   ├── services/
-│   │   │   ├── file_walker.py      
-│   │   │   ├── chunker.py          
-│   │   │   ├── embedder.py         
-│   │   │   ├── vector_store.py     
-│   │   │   └── ingestion.py        
-│   │   └── main.py                 
+│   │   │   ├── file_walker.py    ← Walks repo, returns source files
+│   │   │   ├── chunker.py        ← Token-based overlapping chunker
+│   │   │   ├── embedder.py       ← sentence-transformers local embeddings
+│   │   │   ├── vector_store.py   ← Pinecone upsert + search
+│   │   │   └── ingestion.py      ← Full pipeline orchestrator
+│   │   └── main.py               ← FastAPI app factory
 │   ├── requirements.txt
 │   ├── .env.example
 │   └── Dockerfile
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx          ← Main two-column layout
+│   │   │   ├── layout.tsx        ← Root HTML layout
+│   │   │   └── globals.css       ← Tailwind + custom styles
+│   │   ├── components/
+│   │   │   ├── UploadPanel.tsx   ← Drag-and-drop + GitHub URL
+│   │   │   ├── ProjectSelector.tsx ← Switch between projects
+│   │   │   ├── ChatInterface.tsx ← Full chat with SSE streaming
+│   │   │   ├── ChatMessage.tsx   ← Message bubble + markdown
+│   │   │   └── StatusBar.tsx     ← Live agent progress display
+│   │   └── lib/
+│   │       └── api.ts            ← Typed API client + streamChat()
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── next.config.mjs
+│   └── Dockerfile
+│
 ├── docker-compose.yml
 ├── .gitignore
 └── README.md
@@ -58,138 +104,121 @@ ai-copilot/
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 ### 1. Clone and configure
 
 ```bash
 git clone <this-repo>
-cd codepilot
+cd ai-copilot
+
+# Configure backend secrets
 cp backend/.env.example backend/.env
-# Fill in PINECONE_API_KEY and GROQ_API_KEY in backend/.env
+# Edit backend/.env and fill in:
+#   PINECONE_API_KEY
+#   GROQ_API_KEY
 ```
 
-### 2. Run with Docker
+### 2. Run with Docker (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-API available at: `http://localhost:8000`  
-Interactive docs: `http://localhost:8000/docs`
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API docs: http://localhost:8000/docs
 
-### 3. Run locally (without Docker)
+### 3. Run locally (dev)
 
+**Backend:**
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # fill in keys
 uvicorn app.main:app --reload
 ```
 
----
-
-## API Endpoints
-
-### Upload
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/upload/zip` | Upload a `.zip` of a repo |
-| `POST` | `/api/upload/github` | Clone a GitHub repo by URL |
-| `GET` | `/api/upload/projects` | List all ingested projects |
-
-**Upload ZIP**
+**Frontend:**
 ```bash
-curl -X POST http://localhost:8000/api/upload/zip \
-  -F "file=@myrepo.zip" \
-  -F "project_name=myrepo"
-```
-
-**Clone GitHub repo**
-```bash
-curl -X POST http://localhost:8000/api/upload/github \
-  -F "github_url=https://github.com/owner/repo"
-```
-
-Response:
-```json
-{ "project_id": "uuid-here", "name": "myrepo", "status": "ready" }
+cd frontend
+npm install
+cp .env.local.example .env.local
+npm run dev
 ```
 
 ---
 
-### Chat (SSE Streaming)
+## 🔑 Required API Keys
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/chat/stream` | Ask a question, get streamed answer |
-| `GET` | `/api/chat/history/{project_id}` | Fetch last 20 conversation turns |
+| Service  | Get Key |
+|---|---|
+| **Pinecone** | https://app.pinecone.io |
+| **Groq**  | https://console.groq.com |
 
-**Ask a question**
-```bash
-curl -X POST http://localhost:8000/api/chat/stream \
-  -H "Content-Type: application/json" \
-  -d '{"project_id": "your-project-id", "question": "explain the auth flow"}'
+---
+
+## 🏗️ Architecture
+
 ```
-
-**SSE response format**
-```
-data: {"type": "status", "message": "🧠 Planning which agents to run..."}
-data: {"type": "status", "message": "🔍 Retrieving top 10 relevant code chunks..."}
-data: {"type": "status", "message": "💻 Running Code Analysis agent..."}
-data: {"type": "chunk", "token": "The "}
-data: {"type": "chunk", "token": "authentication "}
-...
-data: {"type": "done", "agents_used": ["code_analysis"]}
+User
+ │
+ ▼
+Next.js Frontend (port 3000)
+ │  ← SSE stream
+ ▼
+FastAPI Backend (port 8000)
+ │
+ ├── /api/upload/zip        → Ingestion Pipeline
+ ├── /api/upload/github     →   file_walker → chunker → embedder → Pinecone
+ └── /api/chat/stream       → LangGraph Graph
+                                 │
+                          ┌──────▼──────┐
+                          │  retrieval  │ ← embed query → Pinecone top-10
+                          └──────┬──────┘
+                          ┌──────▼──────┐
+                          │   planner   │ ← decides: code_analysis | security
+                          └──────┬──────┘
+                     ┌───────────┴────────────┐
+               ┌─────▼──────┐         ┌───────▼──────┐
+               │code_analysis│         │   security   │
+               └─────┬───────┘         └───────┬──────┘
+                     └───────────┬─────────────┘
+                          ┌──────▼──────┐
+                          │   report    │ ← compose final markdown
+                          └─────────────┘
+                                 │
+                          PostgreSQL ← save conversation
 ```
 
 ---
 
-## How It Works
+## 📖 Usage
 
-```
-POST /api/chat/stream
-        │
-        ▼
-   retrieval node      ← embed query → Pinecone top-10 chunks
-        │
-        ▼
-   planner node        ← decides: code_analysis | security | both
-        │
-   ┌────┴────┐
-   ▼         ▼
-code_analysis  security
-   └────┬────┘
-        ▼
-   report node         ← merges outputs into clean markdown
-        │
-        ▼
-   SSE stream          ← token-by-token to client
-        │
-        ▼
-   PostgreSQL          ← saves Q&A + agents used
-```
+1. **Import a repo** — paste a GitHub URL or drag a ZIP
+2. **Wait for ingestion** — typically 30s–2min depending on repo size
+3. **Ask questions** — the AI retrieves relevant chunks and analyzes them
+
+### Example queries
+- `"Explain the overall architecture"`
+- `"Find SQL injection vulnerabilities"`
+- `"Describe the authentication flow"`
+- `"Are there any hardcoded API keys?"`
+- `"What does the UserService class do?"`
 
 ---
 
-## Required API Keys
+## 🛠️ Tech Stack
 
-| Service | Free Tier | Link |
-|---|---|---|
-| Pinecone | ✅ Yes | https://app.pinecone.io |
-| Groq | ✅ Yes | https://console.groq.com |
-
-No OpenAI key needed — embeddings run fully locally.
-
----
-
-## Example Queries
-
-```
-"Explain the overall architecture of this codebase"
-"Find any SQL injection vulnerabilities"
-"Describe the authentication and authorization flow"
-"Are there any hardcoded secrets or API keys?"
-"What does the UserService class do?"
-```
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, React, Tailwind CSS, react-markdown |
+| Backend | FastAPI, Python 3.11, SQLAlchemy (async) |
+| Database | PostgreSQL 15 |
+| Embeddings | sentence-transformers `all-MiniLM-L6-v2` (local, 384-dim) |
+| Vector DB | Pinecone |
+| LLM | Groq (llama3-70b-8192) |
+| Agents | LangGraph |
+| Streaming | Server-Sent Events (SSE) |
+| Container | Docker + docker-compose |

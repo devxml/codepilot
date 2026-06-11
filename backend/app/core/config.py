@@ -1,7 +1,3 @@
-"""
-backend/app/core/config.py
-Application-wide settings loaded from environment variables via pydantic-settings.
-"""
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -27,8 +23,10 @@ class Settings(BaseSettings):
     CHUNK_SIZE_TOKENS: int = 512
     CHUNK_OVERLAP_TOKENS: int = 50
     EMBED_BATCH_SIZE: int = 64
-    RETRIEVAL_TOP_K: int = 10
-    CONVERSATION_HISTORY_LIMIT: int = 5
+    RETRIEVAL_TOP_K: int = 4
+    CONVERSATION_HISTORY_LIMIT: int = 2
+    MAX_CHARS_PER_CHUNK: int = 1200
+    MAX_TOTAL_INPUT_CHARS: int = 8000
 
     class Config:
         env_file = ".env"

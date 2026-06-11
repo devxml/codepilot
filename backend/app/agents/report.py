@@ -1,7 +1,3 @@
-"""
-backend/app/agents/report.py
-Report Agent — combines outputs from all other agents into a clean markdown response.
-"""
 from groq import Groq
 from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
@@ -62,7 +58,7 @@ def report_node(state: AgentState) -> AgentState:
                 ),
             }
         ],
-        max_tokens=3000,
+        max_tokens=1200,
         temperature=0.2,
     )
 

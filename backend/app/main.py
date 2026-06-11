@@ -1,7 +1,3 @@
-"""
-backend/app/main.py
-FastAPI application factory — registers routers, CORS, startup events.
-"""
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

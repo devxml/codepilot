@@ -1,7 +1,3 @@
-"""
-backend/app/agents/code_analysis.py
-Code Analysis Agent — explains code, traces flows, generates documentation.
-"""
 from groq import Groq
 from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
@@ -60,7 +56,7 @@ def code_analysis_node(state: AgentState) -> AgentState:
                 ),
             }
         ],
-        max_tokens=2048,
+        max_tokens=900,
         temperature=0.2,
     )
 

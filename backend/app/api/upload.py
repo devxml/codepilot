@@ -1,7 +1,3 @@
-"""
-backend/app/api/upload.py
-Handles ZIP upload and GitHub URL ingestion.
-"""
 import os
 import uuid
 import asyncio

@@ -1,7 +1,3 @@
-"""
-backend/app/db/models.py
-SQLAlchemy ORM models for projects, files, chunks, and conversations.
-"""
 from sqlalchemy import (
     Column, String, Integer, Text, DateTime, ForeignKey, JSON, func
 )

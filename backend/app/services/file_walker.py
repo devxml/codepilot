@@ -1,7 +1,3 @@
-"""
-backend/app/services/file_walker.py
-Walks a cloned/extracted repo directory and returns parseable source files.
-"""
 import os
 from pathlib import Path
 from typing import Generator
