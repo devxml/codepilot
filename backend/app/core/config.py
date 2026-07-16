@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     PINECONE_API_KEY: str
     PINECONE_INDEX_NAME: str = "code-copilot"
 
-    # Groq
-    GROQ_API_KEY: str
-    GROQ_MODEL: str = "llama3-70b-8192"
+    # Gemini
+    GEMINI_API_KEY: str
+    GEMINI_MODEL: str = "gemini-3.5-flash"
 
     # App
     SECRET_KEY: str = "change-me-in-production"

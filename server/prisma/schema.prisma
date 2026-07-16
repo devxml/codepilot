@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users & Auth ────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  workspaces     Workspace[]
+  subscription   UserSubscription?
+  billingRecords BillingRecord[]
+  activityLogs   ActivityLog[]
+
+  @@map("users")
+}
+
+// ─── Workspaces ──────────────────────────────────────────────────────────────
+
+model Workspace {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String
+  description String?
+  userId      String   @map("user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositories Repository[]
+  chatSessions ChatSession[]
+
+  @@unique([userId, slug])
+  @@map("workspaces")
+}
+
+// ─── Repositories ────────────────────────────────────────────────────────────
+
+model Repository {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  aiProjectId     String?   @unique @map("ai_project_id")
+  name            String
+  description     String?
+  sourceType      String    @map("source_type")
+  sourceUrl       String?   @map("source_url")
+  status          String    @default("processing")
+  defaultBranch   String?   @map("default_branch")
+  owner           String?
+  languages       Json?
+  repoSizeBytes   BigInt?   @map("repo_size_bytes")
+  fileCount       Int       @default(0) @map("file_count")
+  functionCount   Int       @default(0) @map("function_count")
+  classCount      Int       @default(0) @map("class_count")
+  apiRouteCount   Int       @default(0) @map("api_route_count")
+  lastIndexedAt   DateTime? @map("last_indexed_at")
+  validationError String?   @map("validation_error")
+  localPath       String?   @map("local_path")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  chatSessions ChatSession[]
+  files        RepoFile[]
+  apiRoutes    ApiRoute[]
+  activities   ActivityLog[]
+
+  @@map("repositories")
+}
+
+model RepoFile {
+  id           String   @id @default(uuid()) @db.Uuid
+  repositoryId String   @map("repository_id") @db.Uuid
+  filename     String
+  filepath     String
+  language     String?
+  content      String?  @db.Text
+  sizeBytes    Int      @default(0) @map("size_bytes")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@index([repositoryId])
+  @@index([filepath])
+  @@map("repo_files")
+}
+
+model ApiRoute {
+  id           String @id @default(uuid()) @db.Uuid
+  repositoryId String @map("repository_id") @db.Uuid
+  method       String
+  path         String
+  filepath     String
+  lineNumber   Int    @map("line_number")
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@map("api_routes")
+}
+
+// ─── Chat ────────────────────────────────────────────────────────────────────
+
+model ChatSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  repositoryId String   @map("repository_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  title        String   @default("New Chat")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  workspace  Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  repository Repository    @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  role           String
+  content        String   @db.Text
+  fileReferences Json?    @map("file_references")
+  agentsUsed     Json?    @map("agents_used")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+// ─── Subscriptions & Billing ─────────────────────────────────────────────────
+
+model SubscriptionPlan {
+  id                  String  @id @default(uuid()) @db.Uuid
+  name                String  @unique
+  displayName         String  @map("display_name")
+  priceMonthly        Int     @default(0) @map("price_monthly")
+  maxRepositories     Int?    @map("max_repositories")
+  maxChatsPerMonth    Int?    @map("max_chats_per_month")
+  maxZipSizeMb        Int     @default(25) @map("max_zip_size_mb")
+  maxExtractedSizeMb  Int     @default(100) @map("max_extracted_size_mb")
+  maxSourceFiles      Int     @default(2000) @map("max_source_files")
+  maxSourceFileSizeMb Int     @default(1) @map("max_source_file_size_mb")
+
+  subscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @unique @map("user_id") @db.Uuid
+  planId             String    @map("plan_id") @db.Uuid
+  status             String    @default("active")
+  razorpayCustomerId String?   @map("razorpay_customer_id")
+  razorpaySubId      String?   @map("razorpay_sub_id")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  chatsUsedThisMonth Int       @default(0) @map("chats_used_this_month")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@map("user_subscriptions")
+}
+
+model BillingRecord {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  razorpayOrderId   String?  @map("razorpay_order_id")
+  razorpayPaymentId String?  @map("razorpay_payment_id")
+  amount            Int
+  currency          String   @default("INR")
+  status            String
+  description       String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("billing_records")
+}
+
+// ─── Activity ────────────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  repositoryId String?  @map("repository_id") @db.Uuid
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository Repository? @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}
