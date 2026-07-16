@@ -95,9 +95,9 @@ async def event_stream(
         message = str(e)
         status_code = getattr(e, "status_code", None)
 
-        if status_code in (413, 429) or "rate_limit_exceeded" in message or "too large for model" in message:
+        if status_code in (413, 429) or "rate_limit" in message.lower() or "too large" in message.lower():
             message = (
-                "The request hit Groq’s token/rate limit. "
+                "The request hit Gemini's token or rate limit. "
                 "Please try a smaller query or reduce the code context, then retry."
             )
 

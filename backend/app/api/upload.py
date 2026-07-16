@@ -9,7 +9,9 @@ from sqlalchemy import select
 from backend.app.db.session import get_db
 from backend.app.db.models import Project
 from backend.app.core.config import get_settings
+from backend.app.services.file_walker import validate_zip_size
 from backend.app.services.ingestion import ingest_from_zip, ingest_from_github
+from backend.app.services.sync import build_project_sync
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 settings = get_settings()
@@ -31,6 +33,11 @@ async def upload_zip(
 
     # Save upload to disk
     content = await file.read()
+
+    zip_error = validate_zip_size(len(content))
+    if zip_error:
+        raise HTTPException(status_code=400, detail=zip_error)
+
     with open(temp_path, "wb") as f:
         f.write(content)
 
@@ -43,6 +50,8 @@ async def upload_zip(
             project_name=name,
             db=db,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
     finally:
@@ -66,6 +75,8 @@ async def upload_github(
             github_url=github_url,
             db=db,
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 
@@ -88,3 +99,23 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
         }
         for p in projects
     ]
+
+
+@router.get("/projects/{project_id}/sync")
+async def get_project_sync_payload(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the indexed repository data needed by the application API.
+
+    This endpoint is consumed only by the Express service after a successful
+    ingestion. The AI service remains the source of truth for raw indexed code,
+    while Express owns user-facing repository metadata and access control.
+    """
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if project.status != "ready":
+        raise HTTPException(status_code=409, detail="Project indexing is not complete")
+
+    return await build_project_sync(project_id, db)
