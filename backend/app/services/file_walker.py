@@ -20,7 +20,10 @@ SKIP_DIRS = {
     ".idea", ".vscode",
 }
 
-MAX_FILE_SIZE_BYTES = 500_000  # 500 KB — skip very large generated files
+MAX_FILE_SIZE_BYTES = 1_000_000  # 1 MB per source file
+MAX_SUPPORTED_FILES = 2_000
+MAX_EXTRACTED_SIZE_BYTES = 100 * 1_000_000  # 100 MB
+MAX_ZIP_SIZE_BYTES = 25 * 1_000_000  # 25 MB
 
 
 def detect_language(filepath: str) -> str:
@@ -39,6 +42,60 @@ def detect_language(filepath: str) -> str:
         ".sh": "bash", ".bash": "bash",
     }
     return mapping.get(ext, "unknown")
+
+
+def validate_zip_size(size_bytes: int) -> str | None:
+    if size_bytes > MAX_ZIP_SIZE_BYTES:
+        mb = MAX_ZIP_SIZE_BYTES / 1_000_000
+        return f"ZIP file exceeds the {mb:.0f} MB limit."
+    return None
+
+
+def validate_extracted_repo(root_dir: str) -> str | None:
+    """Validate extracted/cloned repo size and file count before indexing."""
+    total_size = 0
+    file_count = 0
+    oversized_files: list[str] = []
+
+    root = Path(root_dir)
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+
+        for filename in filenames:
+            full_path = Path(dirpath) / filename
+            ext = full_path.suffix.lower()
+
+            if ext not in SUPPORTED_EXTENSIONS:
+                continue
+
+            try:
+                size = full_path.stat().st_size
+            except OSError:
+                continue
+
+            if size > MAX_FILE_SIZE_BYTES:
+                oversized_files.append(str(full_path.relative_to(root)))
+                continue
+
+            total_size += size
+            file_count += 1
+
+            if file_count > MAX_SUPPORTED_FILES:
+                return f"Repository exceeds the {MAX_SUPPORTED_FILES:,} supported file limit."
+
+    if total_size > MAX_EXTRACTED_SIZE_BYTES:
+        mb = MAX_EXTRACTED_SIZE_BYTES / 1_000_000
+        return f"Extracted repository size exceeds the {mb:.0f} MB limit."
+
+    if oversized_files:
+        sample = ", ".join(oversized_files[:3])
+        suffix = f" and {len(oversized_files) - 3} more" if len(oversized_files) > 3 else ""
+        return f"Source files exceed the 1 MB limit: {sample}{suffix}."
+
+    if file_count == 0:
+        return "No supported source files found in the repository."
+
+    return None
 
 
 def walk_repo(root_dir: str) -> Generator[dict, None, None]:

@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from backend.app.core.config import get_settings
 from backend.app.db.models import Project, File, Chunk
-from backend.app.services.file_walker import walk_repo
+from backend.app.services.file_walker import walk_repo, validate_extracted_repo
 from backend.app.services.chunker import chunk_file
 from backend.app.services.embedder import embed_texts
 from backend.app.services.vector_store import upsert_chunks
@@ -99,6 +99,13 @@ async def _run_ingestion(
     )
     db.add(project)
     await db.flush()
+
+    validation_error = validate_extracted_repo(root_dir)
+    if validation_error:
+        project.status = "failed"
+        await db.commit()
+        shutil.rmtree(root_dir, ignore_errors=True)
+        raise ValueError(validation_error)
 
     all_chunks: list[dict] = []
     file_records: list[File] = []
