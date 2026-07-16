@@ -1,223 +1,159 @@
-# 🤖 AI Software Engineering Copilot
+# CodePilot
 
-An AI-powered code analysis tool. Upload a GitHub repo or ZIP file, ask questions in plain English, and get intelligent answers powered by a multi-agent LangGraph pipeline, semantic search (Pinecone), and Groq's blazing-fast LLMs — streamed live to your browser.
+CodePilot is an AI-assisted repository understanding platform. It lets users upload a GitHub repository or a ZIP archive, index the codebase, and ask natural-language questions about architecture, data flow, implementation details, and security. The product is built as a three-layer system: a modern Next.js frontend, an Express-based product API, and a Python/FastAPI AI service.
 
----
+## What is implemented
 
-## ✨ Features
+The current repository includes a working MVP-style workflow for:
 
-| Feature | Details |
-|---|---|
-| **Repo Ingestion** | GitHub clone or ZIP upload |
-| **Semantic Search** | sentence-transformers + Pinecone cosine similarity |
-| **Multi-Agent AI** | Planner → Retrieval → Code Analysis / Security → Report |
-| **SSE Streaming** | Live word-by-word response in the UI |
-| **Conversation Memory** | Last 5 exchanges injected into every prompt |
-| **Docker** | One command: `docker compose up` |
+- Repository ingestion from ZIP uploads or GitHub URLs
+- Project and workspace management for authenticated users
+- Repository indexing and metadata persistence in PostgreSQL
+- Semantic retrieval using sentence-transformers and Pinecone
+- Multi-agent analysis with planner, retrieval, code analysis, security, and report agents
+- Streaming chat responses over Server-Sent Events (SSE)
+- Subscription plan scaffolding and billing primitives on the server side
+- Docker-based local development for the full stack
 
 
----
+## Architecture
 
-## 📸 Screenshots
+CodePilot is organized into three main layers:
 
-### GitHub Repository Upload
+1. Frontend: Next.js and React for the user experience
+2. Server API: Express + Prisma + PostgreSQL for authentication, workspaces, repositories, chat sessions, and subscriptions
+3. AI service: FastAPI + LangGraph + Gemini + Pinecone + sentence-transformers for repository analysis and retrieval
 
-![GitHub Repository Upload](./assets/screenshots/githuburlupload.png)
+The request flow looks like this:
 
-Import repositories directly using a GitHub URL or upload a ZIP file for analysis.
+- A repository is uploaded or linked from GitHub
+- The server stores repository metadata and forwards indexing work to the AI service
+- The AI service chunks the repository, generates embeddings, stores them in Pinecone, and prepares the repository for chat-based analysis
+- The frontend streams answers back to the user as the agent workflow runs
 
----
+## Tech stack
 
-### Chat Interface
+- Frontend: Next.js 14, React, TypeScript, Tailwind CSS
+- Server API: Node.js, Express, Prisma, PostgreSQL, JWT, Multer
+- AI service: Python 3.12, FastAPI, LangGraph, Gemini 3.5 Flash, Pinecone, sentence-transformers
+- Containerization: Docker Compose
 
-![Chat Interface](./assets/screenshots/chatsection.png)
+## Repository structure
 
-Ask questions about the codebase in plain English and receive intelligent, context-aware answers powered by semantic search and AI agents.
-
----
-
-### Real-Time SSE Streaming
-
-![SSE Streaming Response](./assets/screenshots/SSEresponse.png)
-
-Responses are streamed live to the browser using Server-Sent Events (SSE), providing a smooth and interactive chat experience.
-
----
-
-## 📁 Project Structure
-
-```
-ai-copilot/
-├── backend/
-│   ├── app/
-│   │   ├── agents/
-│   │   │   ├── state.py          ← Shared LangGraph state TypedDict
-│   │   │   ├── graph.py          ← Compiled LangGraph graph
-│   │   │   ├── planner.py        ← Decides which agents to run
-│   │   │   ├── retrieval.py      ← Embeds query + fetches Pinecone chunks
-│   │   │   ├── code_analysis.py  ← Explains code / architecture
-│   │   │   ├── security.py       ← Finds vulnerabilities
-│   │   │   └── report.py         ← Composes final markdown answer
-│   │   ├── api/
-│   │   │   ├── upload.py         ← ZIP / GitHub ingestion endpoints
-│   │   │   └── chat.py           ← SSE streaming chat endpoint
-│   │   ├── core/
-│   │   │   └── config.py         ← Pydantic settings from .env
-│   │   ├── db/
-│   │   │   ├── models.py         ← SQLAlchemy ORM models
-│   │   │   └── session.py        ← Async engine + session factory
-│   │   ├── services/
-│   │   │   ├── file_walker.py    ← Walks repo, returns source files
-│   │   │   ├── chunker.py        ← Token-based overlapping chunker
-│   │   │   ├── embedder.py       ← sentence-transformers local embeddings
-│   │   │   ├── vector_store.py   ← Pinecone upsert + search
-│   │   │   └── ingestion.py      ← Full pipeline orchestrator
-│   │   └── main.py               ← FastAPI app factory
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.tsx          ← Main two-column layout
-│   │   │   ├── layout.tsx        ← Root HTML layout
-│   │   │   └── globals.css       ← Tailwind + custom styles
-│   │   ├── components/
-│   │   │   ├── UploadPanel.tsx   ← Drag-and-drop + GitHub URL
-│   │   │   ├── ProjectSelector.tsx ← Switch between projects
-│   │   │   ├── ChatInterface.tsx ← Full chat with SSE streaming
-│   │   │   ├── ChatMessage.tsx   ← Message bubble + markdown
-│   │   │   └── StatusBar.tsx     ← Live agent progress display
-│   │   └── lib/
-│   │       └── api.ts            ← Typed API client + streamChat()
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── next.config.mjs
-│   └── Dockerfile
-│
+```text
+codepilot/
+├── backend/                # FastAPI AI service
+│   └── app/
+│       ├── agents/         # Planner, retrieval, code analysis, security, report
+│       ├── api/            # Upload and chat endpoints
+│       ├── core/           # Shared settings
+│       ├── db/             # SQLAlchemy models and session setup
+│       └── services/       # Ingestion, chunking, embeddings, vector search, LLM
+├── frontend/               # Next.js application
+│   └── src/
+│       ├── app/            # Pages and app router routes
+│       ├── components/     # UI components for upload, chat, project selection, status
+│       ├── context/       # Auth context
+│       └── lib/            # API client helpers
+├── server/                 # Express API and Prisma schema
+│   ├── prisma/            # Database schema and seed data
+│   └── src/
+│       ├── routes/        # Auth, workspaces, repositories, chat, dashboard, subscriptions
+│       └── services/      # Business logic for the product API
 ├── docker-compose.yml
-├── .gitignore
 └── README.md
 ```
 
----
+## Local development
 
-## 🚀 Getting Started
+### Prerequisites
 
-### 1. Clone and configure
+- Node.js 20+
+- Python 3.12+
+- Docker Desktop (recommended for PostgreSQL and the full stack)
+- A Pinecone account and API key
+- A Gemini API key
 
-```bash
-git clone <this-repo>
-cd ai-copilot
-
-# Configure backend secrets
-cp backend/.env.example backend/.env
-# Edit backend/.env and fill in:
-#   PINECONE_API_KEY
-#   GROQ_API_KEY
-```
-
-### 2. Run with Docker (recommended)
+### Option 1: Run everything with Docker
 
 ```bash
 docker compose up --build
 ```
 
+Once running:
+
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
+- Server API: http://localhost:4000
+- AI service: http://localhost:8000
 - API docs: http://localhost:8000/docs
 
-### 3. Run locally (dev)
+### Option 2: Run the services manually
 
-**Backend:**
-```bash
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # fill in keys
-uvicorn app.main:app --reload
-```
+#### 1) Server API
 
-**Frontend:**
 ```bash
-cd frontend
+cd server
 npm install
-cp .env.local.example .env.local
+npm run db:generate
+npm run db:push
+npm run db:seed
 npm run dev
 ```
 
----
+Create a server environment file at server/.env with values such as:
 
-## 🔑 Required API Keys
-
-| Service  | Get Key |
-|---|---|
-| **Pinecone** | https://app.pinecone.io |
-| **Groq**  | https://console.groq.com |
-
----
-
-## 🏗️ Architecture
-
-```
-User
- │
- ▼
-Next.js Frontend (port 3000)
- │  ← SSE stream
- ▼
-FastAPI Backend (port 8000)
- │
- ├── /api/upload/zip        → Ingestion Pipeline
- ├── /api/upload/github     →   file_walker → chunker → embedder → Pinecone
- └── /api/chat/stream       → LangGraph Graph
-                                 │
-                          ┌──────▼──────┐
-                          │  retrieval  │ ← embed query → Pinecone top-10
-                          └──────┬──────┘
-                          ┌──────▼──────┐
-                          │   planner   │ ← decides: code_analysis | security
-                          └──────┬──────┘
-                     ┌───────────┴────────────┐
-               ┌─────▼──────┐         ┌───────▼──────┐
-               │code_analysis│         │   security   │
-               └─────┬───────┘         └───────┬──────┘
-                     └───────────┬─────────────┘
-                          ┌──────▼──────┐
-                          │   report    │ ← compose final markdown
-                          └─────────────┘
-                                 │
-                          PostgreSQL ← save conversation
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/ai_copilot
+JWT_SECRET=replace-me
+CORS_ORIGINS=http://localhost:3000
+AI_SERVICE_URL=http://localhost:8000
 ```
 
----
+#### 2) AI service
 
-## 📖 Usage
+```bash
+cd backend
+python -m venv .venv
+# On Windows PowerShell:
+# .\.venv\Scripts\Activate.ps1
+# On macOS/Linux:
+# source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+```
 
-1. **Import a repo** — paste a GitHub URL or drag a ZIP
-2. **Wait for ingestion** — typically 30s–2min depending on repo size
-3. **Ask questions** — the AI retrieves relevant chunks and analyzes them
+Create a backend environment file at backend/.env with values such as:
 
-### Example queries
-- `"Explain the overall architecture"`
-- `"Find SQL injection vulnerabilities"`
-- `"Describe the authentication flow"`
-- `"Are there any hardcoded API keys?"`
-- `"What does the UserService class do?"`
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/ai_copilot
+PINECONE_API_KEY=your-pinecone-api-key
+PINECONE_INDEX_NAME=code-copilot
+GEMINI_API_KEY=your-gemini-api-key
+CORS_ORIGINS=http://localhost:3000
+```
 
----
+#### 3) Frontend
 
-## 🛠️ Tech Stack
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14, React, Tailwind CSS, react-markdown |
-| Backend | FastAPI, Python 3.11, SQLAlchemy (async) |
-| Database | PostgreSQL 15 |
-| Embeddings | sentence-transformers `all-MiniLM-L6-v2` (local, 384-dim) |
-| Vector DB | Pinecone |
-| LLM | Groq (llama3-70b-8192) |
-| Agents | LangGraph |
-| Streaming | Server-Sent Events (SSE) |
-| Container | Docker + docker-compose |
+## How the product works
+
+1. A user uploads a ZIP file or pastes a GitHub URL.
+2. The server stores the repository metadata and triggers indexing through the AI service.
+3. The AI service walks the repository, chunks its contents, generates embeddings, and stores them in Pinecone.
+4. The user can then ask questions such as:
+   - "Explain the overall architecture"
+   - "Find security vulnerabilities"
+   - "Describe the authentication flow"
+   - "Are there any hardcoded secrets?"
+5. The agent workflow retrieves relevant code chunks, analyzes them, and streams a response back to the UI.
+
+## Current status
+
+This repository currently contains a functional MVP-style implementation for repository ingestion, indexing, authentication, workspace management, chat, and AI-assisted analysis. It is suitable for local development and demos. Some production-hardening work remains as future work, including deeper background-job orchestration, expanded billing workflows, and stronger operational safeguards.
+
+
