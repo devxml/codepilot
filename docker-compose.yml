@@ -20,8 +20,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─── FastAPI Backend ───────────────────────────────────────────
-  backend:
+  # ─── FastAPI AI Service ────────────────────────────────────────
+  ai-service:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -31,7 +31,7 @@ services:
     env_file:
       - ./backend/.env
     volumes:
-      - ./backend:/app          # hot-reload in dev
+      - ./backend:/app
       - /tmp/ai_copilot_uploads:/tmp/uploads
     depends_on:
       db:
@@ -39,6 +39,29 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/ai_copilot
       UPLOAD_DIR: /tmp/uploads
+
+  # ─── Express API Server ────────────────────────────────────────
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/ai_copilot
+      AI_SERVICE_URL: http://ai-service:8000
+      CORS_ORIGINS: http://localhost:3000
 
   # ─── Next.js Frontend ──────────────────────────────────────────
   frontend:
@@ -49,9 +72,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
     depends_on:
-      - backend
+      - api
 
 volumes:
   postgres_data:
