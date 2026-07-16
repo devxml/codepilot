@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -10,33 +10,34 @@ import {
   Github,
   RefreshCw,
 } from "lucide-react";
-import { fetchProjects, Project } from "@/lib/api";
+import { fetchRepositories, Project } from "@/lib/api";
 import clsx from "clsx";
 
 interface Props {
+  workspaceId: string;
   selectedId: string | null;
   onSelect: (project: Project) => void;
 }
 
-export default function ProjectSelector({ selectedId, onSelect }: Props) {
+export default function ProjectSelector({ workspaceId, selectedId, onSelect }: Props) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchProjects();
+      const data = await fetchRepositories(workspaceId);
       setProjects(data);
     } catch {
       // Keep the existing quiet failure behavior.
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   if (projects.length === 0 && !loading) {
     return (
@@ -95,7 +96,7 @@ function ProjectCard({
   selected: boolean;
   onSelect: (project: Project) => void;
 }) {
-  const isGithub = project.source_type === "github";
+  const isGithub = project.sourceType === "github";
   const statusMeta = {
     ready: { icon: CheckCircle2, label: "Ready", className: "border-green/20 bg-green/10 text-green" },
     processing: { icon: Clock3, label: "Indexing", className: "border-yellow/20 bg-yellow/10 text-yellow" },
@@ -133,7 +134,7 @@ function ProjectCard({
             </span>
           </div>
           <p className="mt-1 truncate text-xs text-text-dim">
-            {isGithub ? project.source_url || "GitHub repository" : "Uploaded ZIP archive"}
+            {isGithub ? project.sourceUrl || "GitHub repository" : "Uploaded ZIP archive"}
           </p>
         </div>
       </div>

@@ -14,9 +14,10 @@ import clsx from "clsx";
 
 interface Props {
   onProjectReady: (project: Project) => void;
+  workspaceId?: string;
 }
 
-export default function UploadPanel({ onProjectReady }: Props) {
+export default function UploadPanel({ onProjectReady, workspaceId }: Props) {
   const [tab, setTab] = useState<"github" | "zip">("github");
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -45,13 +46,14 @@ export default function UploadPanel({ onProjectReady }: Props) {
     setLoading(true);
 
     try {
+      if (!workspaceId) throw new Error("Create a workspace before importing a repository.");
       let project: Project;
       if (tab === "zip") {
         if (!file) throw new Error("Select a .zip file first.");
-        project = await uploadZip(file);
+        project = await uploadZip(workspaceId, file);
       } else {
         if (!githubUrl.trim()) throw new Error("Enter a GitHub URL.");
-        project = await uploadGitHub(githubUrl.trim());
+        project = await uploadGitHub(workspaceId, githubUrl.trim());
       }
 
       setSuccess(`${project.name} is ready.`);

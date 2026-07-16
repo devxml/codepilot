@@ -10,7 +10,12 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { streamChat, fetchHistory } from "@/lib/api";
+import {
+  createChatSession,
+  fetchChatHistory,
+  fetchSuggestedQuestions,
+  streamChat,
+} from "@/lib/api";
 import ChatMessage, { Message } from "./ChatMessage";
 import StatusBar from "./StatusBar";
 
@@ -19,6 +24,7 @@ const uid = () => Math.random().toString(36).slice(2);
 interface Props {
   projectId: string;
   projectName: string;
+  workspaceId: string;
 }
 
 const SUGGESTED_QUERIES = [
@@ -29,40 +35,50 @@ const SUGGESTED_QUERIES = [
   "Are there any hardcoded secrets or API keys?",
 ];
 
-export default function ChatInterface({ projectId, projectName }: Props) {
+export default function ChatInterface({ projectId, projectName, workspaceId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [statusUpdates, setStatusUpdates] = useState<string[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [suggestedQueries, setSuggestedQueries] = useState(SUGGESTED_QUERIES);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setMessages([]);
     setStatusUpdates([]);
-    fetchHistory(projectId)
-      .then((turns) => {
-        const nextMessages: Message[] = [];
-        turns.forEach((turn) => {
-          nextMessages.push({ id: uid(), role: "user", content: turn.question });
-          nextMessages.push({
-            id: uid(),
-            role: "assistant",
-            content: turn.answer,
-            agents_used: turn.agents_used,
-          });
-        });
-        setMessages(nextMessages);
+    setSessionId(null);
+    let active = true;
+
+    Promise.all([
+      createChatSession(workspaceId, projectId),
+      fetchSuggestedQuestions(workspaceId, projectId),
+    ])
+      .then(async ([session, suggestions]) => {
+        if (!active) return;
+        setSessionId(session.id);
+        setSuggestedQueries(suggestions.length ? suggestions : SUGGESTED_QUERIES);
+        const history = await fetchChatHistory(workspaceId, projectId, session.id);
+        if (!active) return;
+        setMessages(history.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          agents_used: message.agentsUsed,
+        })));
       })
       .catch(() => {});
-  }, [projectId]);
+
+    return () => { active = false; };
+  }, [projectId, workspaceId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, statusUpdates]);
 
   const send = async (question: string) => {
-    if (!question.trim() || sending) return;
+    if (!question.trim() || sending || !sessionId) return;
     setInput("");
     setSending(true);
     setStatusUpdates([]);
@@ -84,7 +100,7 @@ export default function ChatInterface({ projectId, projectName }: Props) {
     let finalAgents: string[] = [];
 
     try {
-      for await (const event of streamChat(projectId, question)) {
+      for await (const event of streamChat(workspaceId, projectId, sessionId, question)) {
         if (event.type === "status" && event.message) {
           setStatusUpdates((prev) => [...prev, event.message!]);
         } else if (event.type === "chunk" && event.token) {
@@ -176,7 +192,7 @@ export default function ChatInterface({ projectId, projectName }: Props) {
               </p>
             </div>
             <div className="grid w-full gap-2 sm:grid-cols-2">
-              {SUGGESTED_QUERIES.map((query) => (
+              {suggestedQueries.map((query) => (
                 <button
                   key={query}
                   onClick={() => send(query)}
@@ -217,7 +233,7 @@ export default function ChatInterface({ projectId, projectName }: Props) {
               onKeyDown={handleKeyDown}
               placeholder="Ask about architecture, risks, data flow, or a specific file..."
               rows={1}
-              disabled={sending}
+              disabled={sending || !sessionId}
               className="max-h-36 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-3 text-sm leading-6 text-text outline-none placeholder:text-muted disabled:opacity-50"
               onInput={(e) => {
                 const el = e.currentTarget;
@@ -227,7 +243,7 @@ export default function ChatInterface({ projectId, projectName }: Props) {
             />
             <button
               onClick={() => send(input)}
-              disabled={sending || !input.trim()}
+              disabled={sending || !sessionId || !input.trim()}
               className="mb-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-strong to-accent text-white shadow-lg shadow-accent/20 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-35"
               title="Send message"
             >
@@ -235,7 +251,7 @@ export default function ChatInterface({ projectId, projectName }: Props) {
             </button>
           </div>
           <p className="mt-2 text-center text-xs text-text-dim">
-            Powered by Groq, LangGraph, Pinecone, and sentence-transformers
+            Powered by Gemini, LangGraph, Pinecone, and sentence-transformers
           </p>
         </div>
       </div>
