@@ -1,9 +1,5 @@
-from groq import Groq
-from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
-
-settings = get_settings()
-_client = Groq(api_key=settings.GROQ_API_KEY)
+from backend.app.services.llm import generate_text
 
 PLANNER_PROMPT = """\
 You are a planning agent for an AI code analysis system.
@@ -32,21 +28,16 @@ def planner_node(state: AgentState) -> AgentState:
     status_updates = state.get("status_updates", [])
     status_updates.append("🧠 Planning which agents to run...")
 
-    response = _client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {"role": "user", "content": PLANNER_PROMPT.format(query=query)}
-        ],
+    decision = generate_text(
+        PLANNER_PROMPT.format(query=query),
         max_tokens=32,
         temperature=0.0,
-    )
-    decision = response.choices[0].message.content.strip().lower()
+    ).lower()
 
-    # Sanitise — only keep known agent names
     valid_agents = {"code_analysis", "security"}
     chosen = [a.strip() for a in decision.split(",") if a.strip() in valid_agents]
     if not chosen:
-        chosen = ["code_analysis"]  # default fallback
+        chosen = ["code_analysis"]
 
     state["planner_decision"] = ",".join(chosen)
     state["agents_used"] = chosen

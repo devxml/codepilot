@@ -1,10 +1,6 @@
-from groq import Groq
-from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
 from backend.app.agents.retrieval import _format_chunks_for_prompt
-
-settings = get_settings()
-_client = Groq(api_key=settings.GROQ_API_KEY)
+from backend.app.services.llm import generate_text
 
 CODE_ANALYSIS_PROMPT = """\
 You are an expert software engineer performing a code analysis task.
@@ -44,23 +40,16 @@ def code_analysis_node(state: AgentState) -> AgentState:
 
     chunks_text = _format_chunks_for_prompt(state.get("retrieved_chunks", []))
 
-    response = _client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": CODE_ANALYSIS_PROMPT.format(
-                    query=state["query"],
-                    history=history_text,
-                    chunks=chunks_text,
-                ),
-            }
-        ],
+    analysis = generate_text(
+        CODE_ANALYSIS_PROMPT.format(
+            query=state["query"],
+            history=history_text,
+            chunks=chunks_text,
+        ),
         max_tokens=900,
         temperature=0.2,
     )
 
-    analysis = response.choices[0].message.content.strip()
     state["code_analysis"] = analysis
     state["status_updates"] = status_updates
     return state

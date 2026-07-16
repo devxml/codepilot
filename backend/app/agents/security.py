@@ -1,10 +1,6 @@
-from groq import Groq
-from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
 from backend.app.agents.retrieval import _format_chunks_for_prompt
-
-settings = get_settings()
-_client = Groq(api_key=settings.GROQ_API_KEY)
+from backend.app.services.llm import generate_text
 
 SECURITY_PROMPT = """\
 You are an expert application security engineer performing a security audit.
@@ -56,22 +52,15 @@ def security_node(state: AgentState) -> AgentState:
 
     chunks_text = _format_chunks_for_prompt(state.get("retrieved_chunks", []))
 
-    response = _client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": SECURITY_PROMPT.format(
-                    query=state["query"],
-                    chunks=chunks_text,
-                ),
-            }
-        ],
+    analysis = generate_text(
+        SECURITY_PROMPT.format(
+            query=state["query"],
+            chunks=chunks_text,
+        ),
         max_tokens=900,
         temperature=0.1,
     )
 
-    analysis = response.choices[0].message.content.strip()
     state["security_analysis"] = analysis
     state["status_updates"] = status_updates
     return state

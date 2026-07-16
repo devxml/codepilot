@@ -1,9 +1,5 @@
-from groq import Groq
-from backend.app.core.config import get_settings
 from backend.app.agents.state import AgentState
-
-settings = get_settings()
-_client = Groq(api_key=settings.GROQ_API_KEY)
+from backend.app.services.llm import generate_text
 
 REPORT_PROMPT = """\
 You are a technical writing agent. Combine the analysis results below into a single,
@@ -34,7 +30,6 @@ def report_node(state: AgentState) -> AgentState:
     code_analysis = state.get("code_analysis") or "N/A"
     security_analysis = state.get("security_analysis") or "N/A"
 
-    # If only one ran, skip the merge step — return directly
     if code_analysis == "N/A" and security_analysis != "N/A":
         state["final_answer"] = security_analysis
         state["status_updates"] = status_updates
@@ -45,23 +40,16 @@ def report_node(state: AgentState) -> AgentState:
         state["status_updates"] = status_updates
         return state
 
-    # Both ran — merge
-    response = _client.chat.completions.create(
-        model=settings.GROQ_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": REPORT_PROMPT.format(
-                    query=state["query"],
-                    code_analysis=code_analysis,
-                    security_analysis=security_analysis,
-                ),
-            }
-        ],
+    final_answer = generate_text(
+        REPORT_PROMPT.format(
+            query=state["query"],
+            code_analysis=code_analysis,
+            security_analysis=security_analysis,
+        ),
         max_tokens=1200,
         temperature=0.2,
     )
 
-    state["final_answer"] = response.choices[0].message.content.strip()
+    state["final_answer"] = final_answer
     state["status_updates"] = status_updates
     return state
