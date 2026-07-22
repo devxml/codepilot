@@ -113,7 +113,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h1 className="text-base font-bold">CodePilot</h1>
-            <p className="text-xs text-text-dim">Developer Intelligence Platform</p>
+            <p className="text-xs text-text-dim">Developer Productivity Platform</p>
           </div>
 
           <div className="ml-auto flex items-center gap-3">

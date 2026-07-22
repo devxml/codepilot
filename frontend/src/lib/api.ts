@@ -199,13 +199,6 @@ export async function uploadGitHub(workspaceId: string, url: string) {
   });
 }
 
-// Legacy helpers for existing components
-export async function fetchProjects(): Promise<Repository[]> {
-  const workspaces = await fetchWorkspaces();
-  if (!workspaces.length) return [];
-  return fetchRepositories(workspaces[0].id);
-}
-
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
 export async function fetchChatSessions(workspaceId: string, repositoryId: string) {
@@ -316,7 +309,8 @@ export async function* streamChat(
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    const parts = buffer.split("\n\n");
+    // SSE servers and proxies may use either LF or CRLF line endings.
+    const parts = buffer.split(/\r?\n\r?\n/);
     buffer = parts.pop() || "";
 
     for (const part of parts) {
@@ -331,13 +325,3 @@ export async function* streamChat(
   }
 }
 
-// Legacy history fetch for existing ChatInterface
-export async function fetchHistory(projectId: string): Promise<{
-  id: string;
-  question: string;
-  answer: string;
-  agents_used: string[];
-  created_at: string;
-}[]> {
-  return [];
-}

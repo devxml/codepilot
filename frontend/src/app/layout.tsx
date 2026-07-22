@@ -4,7 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "CodePilot",
-  description: "Developer Intelligence Platform — Understand Any Codebase Instantly",
+  description: "Developer Productivity Platform — Understand Any Codebase Instantly",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
