@@ -33,7 +33,6 @@ MODEL_PATTERNS = [
     re.compile(r"@Entity", re.M),
 ]
 
-
 def _extract_api_routes(content: str, filepath: str) -> list[dict]:
     routes: list[dict] = []
     for pattern in ROUTE_PATTERNS:

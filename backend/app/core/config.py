@@ -12,7 +12,16 @@ class Settings(BaseSettings):
 
     # Gemini
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-3.5-flash"
+    # Flash-Lite is well-suited to low-latency repository Q&A and does not use
+    # the default dynamic-thinking pass that can delay short answers.
+    # Keep this configurable so deployments can opt into a different available model.
+    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
+    # Both the SDK request and the orchestration layer use this value.  A
+    # bounded request is important for SSE: otherwise one stalled upstream
+    # request leaves the browser in its streaming state indefinitely.
+    LLM_TIMEOUT_MS: int = 60_000
+    CHAT_TIMEOUT_SECONDS: int = 90
+    LLM_THINKING_BUDGET: int = 0
 
     # App
     SECRET_KEY: str = "change-me-in-production"
