@@ -20,7 +20,8 @@ html, body {
 }
 
 body {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 button,
@@ -105,10 +106,4 @@ textarea:focus-visible {
   padding-left: 1rem;
   color: #97a0ba;
   margin: 0.5rem 0;
-}
-
-@media (max-width: 768px) {
-  body {
-    overflow: auto;
-  }
 }

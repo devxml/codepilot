@@ -3,61 +3,18 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import { Prisma } from "@prisma/client";
 
-export async function checkRepositoryLimit(userId: string) {
-  const sub = await prisma.userSubscription.findUnique({
-    where: { userId },
-    include: { plan: true },
-  });
-
-  if (!sub?.plan.maxRepositories) return;
-
-  const count = await prisma.repository.count({
-    where: { workspace: { userId } },
-  });
-
-  if (count >= sub.plan.maxRepositories) {
-    throw new AppError(
-      403,
-      `Free plan allows up to ${sub.plan.maxRepositories} repositories. Upgrade to Pro for unlimited.`,
-      "REPO_LIMIT",
-    );
-  }
-}
-
-export async function checkChatLimit(userId: string) {
-  const sub = await prisma.userSubscription.findUnique({
-    where: { userId },
-    include: { plan: true },
-  });
-
-  if (!sub?.plan.maxChatsPerMonth) return;
-
-  if (sub.chatsUsedThisMonth >= sub.plan.maxChatsPerMonth) {
-    throw new AppError(
-      403,
-      `Monthly chat limit (${sub.plan.maxChatsPerMonth}) reached. Upgrade to Pro for unlimited chats.`,
-      "CHAT_LIMIT",
-    );
-  }
-}
-
-export async function incrementChatUsage(userId: string) {
-  await prisma.userSubscription.update({
-    where: { userId },
-    data: { chatsUsedThisMonth: { increment: 1 } },
-  });
-}
-
 export async function uploadZipToAI(file: Buffer, projectName: string) {
-  const FormData = (await import("form-data")).default;
   const form = new FormData();
-  form.append("file", file, { filename: "repo.zip", contentType: "application/zip" });
+  form.append(
+    "file",
+    new Blob([file], { type: "application/zip" }),
+    "repo.zip",
+  );
   form.append("project_name", projectName);
 
   const res = await fetch(`${env.aiServiceUrl}/api/upload/zip`, {
     method: "POST",
-    body: form as any,
-    headers: form.getHeaders(),
+    body: form,
   });
 
   if (!res.ok) {
@@ -69,14 +26,12 @@ export async function uploadZipToAI(file: Buffer, projectName: string) {
 }
 
 export async function uploadGitHubToAI(githubUrl: string) {
-  const FormData = (await import("form-data")).default;
   const form = new FormData();
   form.append("github_url", githubUrl);
 
   const res = await fetch(`${env.aiServiceUrl}/api/upload/github`, {
     method: "POST",
-    body: form as any,
-    headers: form.getHeaders(),
+    body: form,
   });
 
   if (!res.ok) {
@@ -117,6 +72,21 @@ export async function getAIRepositorySync(projectId: string) {
     throw new AppError(res.status, err.detail || "Could not synchronize repository metadata");
   }
   return res.json() as Promise<AIRepositorySync>;
+}
+
+export async function generateAIRepositoryReport(projectId: string) {
+  const res = await fetch(`${env.aiServiceUrl}/api/reports/repository`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project_id: projectId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { detail?: string };
+    throw new AppError(res.status, err.detail || "Could not generate repository report");
+  }
+
+  return res.json() as Promise<{ report: string; agents_used: string[] }>;
 }
 
 export async function streamChatFromAI(projectId: string, question: string) {

@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 
 export async function getDashboardStats(userId: string) {
-  const [repoCount, chatCount, recentChats, recentActivity, subscription] = await Promise.all([
+  const [repoCount, chatCount, recentChats, recentActivity] = await Promise.all([
     prisma.repository.count({ where: { workspace: { userId } } }),
     prisma.chatMessage.count({
       where: { session: { userId }, role: "assistant" },
@@ -20,10 +20,6 @@ export async function getDashboardStats(userId: string) {
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { repository: { select: { id: true, name: true } } },
-    }),
-    prisma.userSubscription.findUnique({
-      where: { userId },
-      include: { plan: true },
     }),
   ]);
 
@@ -52,10 +48,6 @@ export async function getDashboardStats(userId: string) {
     stats: {
       repositories: repoCount,
       totalChats: chatCount,
-      chatsUsedThisMonth: subscription?.chatsUsedThisMonth ?? 0,
-      chatLimit: subscription?.plan.maxChatsPerMonth ?? null,
-      repoLimit: subscription?.plan.maxRepositories ?? null,
-      plan: subscription?.plan.displayName ?? "Free",
     },
     workspaces,
     recentChats,

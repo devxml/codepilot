@@ -9,7 +9,6 @@ from sqlalchemy import select
 from backend.app.db.session import get_db
 from backend.app.db.models import Project
 from backend.app.core.config import get_settings
-from backend.app.services.file_walker import validate_zip_size
 from backend.app.services.ingestion import ingest_from_zip, ingest_from_github
 from backend.app.services.sync import build_project_sync
 
@@ -33,10 +32,6 @@ async def upload_zip(
 
     # Save upload to disk
     content = await file.read()
-
-    zip_error = validate_zip_size(len(content))
-    if zip_error:
-        raise HTTPException(status_code=400, detail=zip_error)
 
     with open(temp_path, "wb") as f:
         f.write(content)

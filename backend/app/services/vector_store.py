@@ -61,7 +61,10 @@ def upsert_chunks(
                 "start_line": chunk.get("start_line", 0),
                 "end_line": chunk.get("end_line", 0),
                 "chunk_index": chunk.get("chunk_index", 0),
-                "text": chunk["text"][:1000],  # Pinecone metadata cap: store preview
+                # Keep the entire chunk. A 512-token chunk is safely below Pinecone's
+                # metadata limit, while a 1,000-character preview frequently cuts a
+                # function in half and produces misleading answers.
+                "text": chunk["text"][:8000],
             },
         })
 

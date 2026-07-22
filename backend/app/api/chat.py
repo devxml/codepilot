@@ -13,6 +13,7 @@ from backend.app.db.models import Project, Conversation
 from backend.app.agents.graph import compiled_graph
 from backend.app.agents.state import AgentState
 from backend.app.core.config import get_settings
+from backend.app.services.repository_context import representative_chunks
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 settings = get_settings()
@@ -30,6 +31,11 @@ async def event_stream(
     
     def sse(event_type: str, payload: dict) -> str:
         return f"data: {json.dumps({'type': event_type, **payload})}\n\n"
+
+    # Send headers and a heartbeat immediately. The analysis graph can take tens
+    # of seconds on its first embedding/model call; without this, the Express
+    # proxy and browser may time out before FastAPI starts the SSE response.
+    yield sse("status", {"message": "Preparing repository context..."})
 
     try:
        project_uuid = uuid.UUID(project_id)
@@ -69,12 +75,21 @@ async def event_stream(
         history.append({"role": "user", "content": conv.question})
         history.append({"role": "assistant", "content": conv.answer})
 
+    broad_terms = ("architecture", "overview", "overall", "structure", "folder", "repository", "tech stack", "api inventory")
+    seeded_chunks = []
+    if any(term in question.lower() for term in broad_terms):
+        try:
+            seeded_chunks = await representative_chunks(project_uuid, db)
+        except Exception as exc:
+            # A fallback must never prevent the SSE response from starting.
+            yield sse("status", {"message": f"Repository-wide context was unavailable; using semantic search. ({exc})"})
+
     # Initial state
     initial_state: AgentState = {
         "query": question,
         "project_id": project_id,
         "conversation_history": history,
-        "retrieved_chunks": [],
+        "retrieved_chunks": seeded_chunks,
         "planner_decision": None,
         "code_analysis": None,
         "security_analysis": None,

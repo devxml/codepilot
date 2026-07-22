@@ -53,20 +53,20 @@ async def ingest_from_github(
     """
     project_id = uuid.uuid4()
     clone_dir = os.path.join(settings.UPLOAD_DIR, str(project_id))
-    os.makedirs(clone_dir, exist_ok=True)
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
     # Strip trailing .git for display name
     project_name = github_url.rstrip("/").split("/")[-1].replace(".git", "")
 
     try:
-      git.Repo.clone_from(
-          github_url,
-          clone_dir,
-          depth=1
-    )
+        git.Repo.clone_from(
+            github_url,
+            clone_dir,
+            depth=1,
+        )
     except Exception:
         shutil.rmtree(clone_dir, ignore_errors=True)
-        raise  # shallow clone
+        raise
 
     return await _run_ingestion(
         root_dir=clone_dir,

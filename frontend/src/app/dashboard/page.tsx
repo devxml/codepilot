@@ -13,12 +13,8 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  Zap,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import UploadPanel from "@/components/UploadPanel";
-import ProjectSelector from "@/components/ProjectSelector";
-import ChatInterface from "@/components/ChatInterface";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -26,7 +22,6 @@ import {
   fetchWorkspaces,
   updateWorkspace,
   DashboardStats,
-  Project,
 } from "@/lib/api";
 
 export default function DashboardPage() {
@@ -37,9 +32,6 @@ export default function DashboardPage() {
   const [creatingWorkspace, setCreatingWorkspace] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceError, setWorkspaceError] = useState("");
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [repositoryRefreshKey, setRepositoryRefreshKey] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -104,14 +96,11 @@ export default function DashboardPage() {
     if (!window.confirm("Delete this workspace and all of its repositories?")) return;
     try {
       await deleteWorkspace(id);
-      if (selectedWorkspaceId === id) setSelectedWorkspaceId(null);
       await refreshWorkspaceData();
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : "Could not delete workspace");
     }
   };
-
-  const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -128,10 +117,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-violet-200 sm:inline-flex">
-              <Zap size={12} className="mr-1.5" />
-              {stats?.plan || "Free"} Plan
-            </span>
             <span className="text-sm text-text-dim">{user?.name || user?.email}</span>
             <button
               onClick={logout}
@@ -160,11 +145,6 @@ export default function DashboardPage() {
               label: "AI Chats",
               value: stats?.totalChats ?? 0,
               icon: MessageSquare,
-            },
-            {
-              label: "Chats This Month",
-              value: `${stats?.chatsUsedThisMonth ?? 0}${stats?.chatLimit ? ` / ${stats.chatLimit}` : ""}`,
-              icon: Sparkles,
             },
             { label: "Workspaces", value: workspaces.length, icon: Boxes },
           ].map((stat) => (
@@ -218,16 +198,14 @@ export default function DashboardPage() {
                   key={ws.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => {
-                    setSelectedWorkspaceId(ws.id);
-                    setSelectedProject(null);
-                  }}
+                  onClick={() => router.push(`/dashboard/workspaces/${ws.id}`)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setSelectedWorkspaceId(ws.id);
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/dashboard/workspaces/${ws.id}`);
+                    }
                   }}
-                  className={`premium-card cursor-pointer rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-accent/30 ${
-                    selectedWorkspaceId === ws.id ? "border-accent/50 bg-accent/10" : ""
-                  }`}
+                  className="premium-card cursor-pointer rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-accent/30"
                 >
                   <div className="flex items-center justify-between">
                     <Boxes size={18} className="text-cyan" />
@@ -289,55 +267,6 @@ export default function DashboardPage() {
           </div>
           {workspaceError && !creatingWorkspace && <p className="mt-3 text-sm text-red-300">{workspaceError}</p>}
         </div>
-
-        {selectedWorkspace && (
-          <section className="mb-8 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-            <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-dim">Selected workspace</p>
-              <h3 className="mt-1 text-lg font-bold">{selectedWorkspace.name}</h3>
-            </div>
-            <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
-              <UploadPanel
-                workspaceId={selectedWorkspace.id}
-                onProjectReady={(project) => {
-                  setSelectedProject(project);
-                  setRepositoryRefreshKey((value) => value + 1);
-                  refreshWorkspaceData().catch(console.error);
-                }}
-              />
-              <ProjectSelector
-                key={`${selectedWorkspace.id}-${repositoryRefreshKey}`}
-                workspaceId={selectedWorkspace.id}
-                selectedId={selectedProject?.id ?? null}
-                onSelect={setSelectedProject}
-              />
-            </div>
-          </section>
-        )}
-
-        {selectedProject && selectedWorkspace && (
-          <section className="mb-8 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
-            {selectedProject.status === "ready" ? (
-              <div className="h-[720px]">
-                <ChatInterface
-                  key={selectedProject.id}
-                  projectId={selectedProject.id}
-                  projectName={selectedProject.name}
-                  workspaceId={selectedWorkspace.id}
-                />
-              </div>
-            ) : (
-              <div className="p-6">
-                <h3 className="font-bold">{selectedProject.name}</h3>
-                <p className="mt-2 text-sm text-text-dim">
-                  {selectedProject.status === "processing"
-                    ? "Repository indexing is in progress. Chat will become available when indexing finishes."
-                    : selectedProject.validationError || "Repository indexing failed. Please import it again."}
-                </p>
-              </div>
-            )}
-          </section>
-        )}
 
         {/* Recent Activity */}
         {dashboard?.recentActivity && dashboard.recentActivity.length > 0 && (

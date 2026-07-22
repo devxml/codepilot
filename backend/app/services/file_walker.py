@@ -20,12 +20,6 @@ SKIP_DIRS = {
     ".idea", ".vscode",
 }
 
-MAX_FILE_SIZE_BYTES = 1_000_000  # 1 MB per source file
-MAX_SUPPORTED_FILES = 2_000
-MAX_EXTRACTED_SIZE_BYTES = 100 * 1_000_000  # 100 MB
-MAX_ZIP_SIZE_BYTES = 25 * 1_000_000  # 25 MB
-
-
 def detect_language(filepath: str) -> str:
     ext = Path(filepath).suffix.lower()
     mapping = {
@@ -44,18 +38,9 @@ def detect_language(filepath: str) -> str:
     return mapping.get(ext, "unknown")
 
 
-def validate_zip_size(size_bytes: int) -> str | None:
-    if size_bytes > MAX_ZIP_SIZE_BYTES:
-        mb = MAX_ZIP_SIZE_BYTES / 1_000_000
-        return f"ZIP file exceeds the {mb:.0f} MB limit."
-    return None
-
-
 def validate_extracted_repo(root_dir: str) -> str | None:
-    """Validate extracted/cloned repo size and file count before indexing."""
-    total_size = 0
+    """Check that a repository contains at least one supported source file."""
     file_count = 0
-    oversized_files: list[str] = []
 
     root = Path(root_dir)
     for dirpath, dirnames, filenames in os.walk(root):
@@ -68,29 +53,7 @@ def validate_extracted_repo(root_dir: str) -> str | None:
             if ext not in SUPPORTED_EXTENSIONS:
                 continue
 
-            try:
-                size = full_path.stat().st_size
-            except OSError:
-                continue
-
-            if size > MAX_FILE_SIZE_BYTES:
-                oversized_files.append(str(full_path.relative_to(root)))
-                continue
-
-            total_size += size
             file_count += 1
-
-            if file_count > MAX_SUPPORTED_FILES:
-                return f"Repository exceeds the {MAX_SUPPORTED_FILES:,} supported file limit."
-
-    if total_size > MAX_EXTRACTED_SIZE_BYTES:
-        mb = MAX_EXTRACTED_SIZE_BYTES / 1_000_000
-        return f"Extracted repository size exceeds the {mb:.0f} MB limit."
-
-    if oversized_files:
-        sample = ", ".join(oversized_files[:3])
-        suffix = f" and {len(oversized_files) - 3} more" if len(oversized_files) > 3 else ""
-        return f"Source files exceed the 1 MB limit: {sample}{suffix}."
 
     if file_count == 0:
         return "No supported source files found in the repository."
@@ -101,7 +64,7 @@ def validate_extracted_repo(root_dir: str) -> str | None:
 def walk_repo(root_dir: str) -> Generator[dict, None, None]:
     """
     Yields dicts with keys: filepath, filename, language, content.
-    Skips unsupported, binary, and oversized files.
+    Skips unsupported and binary files.
     """
     root = Path(root_dir)
     for dirpath, dirnames, filenames in os.walk(root):
@@ -115,13 +78,6 @@ def walk_repo(root_dir: str) -> Generator[dict, None, None]:
             if ext not in SUPPORTED_EXTENSIONS:
                 continue
 
-            # Skip oversized files
-            try:
-                if full_path.stat().st_size > MAX_FILE_SIZE_BYTES:
-                    continue
-            except OSError:
-                continue
-
             # Read content, skip binary files
             try:
                 content = full_path.read_text(encoding="utf-8", errors="ignore")
@@ -131,7 +87,9 @@ def walk_repo(root_dir: str) -> Generator[dict, None, None]:
             if not content.strip():
                 continue
 
-            relative_path = str(full_path.relative_to(root))
+            # Store repository paths consistently across Windows and Linux. This is
+            # consumed by report folder analysis, the frontend tree, and vector IDs.
+            relative_path = full_path.relative_to(root).as_posix()
 
             yield {
                 "filepath": relative_path,

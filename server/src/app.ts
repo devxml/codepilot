@@ -6,13 +6,15 @@ import authRoutes from "./routes/auth.routes";
 import workspaceRoutes from "./routes/workspace.routes";
 import repositoryRoutes from "./routes/repository.routes";
 import chatRoutes from "./routes/chat.routes";
-import subscriptionRoutes from "./routes/subscription.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 
 const app = express();
 
 app.use(cors({ origin: env.corsOrigins, credentials: true }));
 app.use(express.json());
+app.set("json replacer", (_key: string, value: unknown) =>
+  typeof value === "bigint" ? value.toString() : value,
+);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "codepilot-api" });
@@ -25,7 +27,6 @@ app.use(
   "/api/workspaces/:workspaceId/repositories/:repositoryId/chats",
   chatRoutes,
 );
-app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 app.use(errorHandler);

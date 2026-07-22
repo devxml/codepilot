@@ -57,14 +57,6 @@ export interface User {
   avatarUrl: string | null;
 }
 
-export interface SubscriptionPlan {
-  name: string;
-  displayName: string;
-  priceMonthly: number;
-  maxRepositories: number | null;
-  maxChatsPerMonth: number | null;
-}
-
 export interface Workspace {
   id: string;
   name: string;
@@ -88,6 +80,8 @@ export interface Repository {
   functionCount: number;
   classCount: number;
   apiRouteCount: number;
+  initialReport: string | null;
+  reportGeneratedAt: string | null;
   lastIndexedAt: string | null;
   validationError: string | null;
   createdAt: string;
@@ -116,10 +110,6 @@ export interface DashboardStats {
   stats: {
     repositories: number;
     totalChats: number;
-    chatsUsedThisMonth: number;
-    chatLimit: number | null;
-    repoLimit: number | null;
-    plan: string;
   };
   workspaces: Workspace[];
   recentChats: ChatSession[];
@@ -282,17 +272,6 @@ export async function fetchDashboard() {
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
 
-export async function fetchPlans() {
-  return apiFetch<SubscriptionPlan[]>("/api/subscriptions/plans");
-}
-
-export async function createCheckout(plan = "pro") {
-  return apiFetch<{ orderId: string; amount: number; keyId: string }>(
-    "/api/subscriptions/checkout",
-    { method: "POST", body: JSON.stringify({ plan }) },
-  );
-}
-
 // ── Streaming chat ────────────────────────────────────────────────────────────
 
 export type SSEEventType = "status" | "chunk" | "done" | "error";
@@ -323,7 +302,10 @@ export async function* streamChat(
     },
   );
 
-  if (!res.ok || !res.body) throw new Error("Stream failed to start");
+  if (!res.ok || !res.body) {
+    const details = await res.json().catch(() => null) as { error?: string; detail?: string } | null;
+    throw new Error(details?.error || details?.detail || `Stream failed to start (${res.status})`);
+  }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

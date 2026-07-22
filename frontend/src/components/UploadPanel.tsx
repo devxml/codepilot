@@ -190,7 +190,7 @@ export default function UploadPanel({ onProjectReady, workspaceId }: Props) {
         {loading ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            Indexing repository
+            Indexing repository… this may take a minute
           </>
         ) : (
           <>

@@ -46,7 +46,7 @@ def report_node(state: AgentState) -> AgentState:
             code_analysis=code_analysis,
             security_analysis=security_analysis,
         ),
-        max_tokens=1200,
+        max_tokens=1600,
         temperature=0.2,
     )
 

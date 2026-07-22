@@ -8,6 +8,7 @@ from backend.app.db.session import create_tables
 from backend.app.services.vector_store import ensure_index_exists
 from backend.app.api.upload import router as upload_router
 from backend.app.api.chat import router as chat_router
+from backend.app.api.report import router as report_router
 
 settings = get_settings()
 
@@ -42,6 +43,7 @@ app.add_middleware(
 # Routers
 app.include_router(upload_router)
 app.include_router(chat_router)
+app.include_router(report_router)
 
 
 @app.get("/health")

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import Chunk, File, Project
+from backend.app.services.repository_context import rebuild_file_content
 
 ROUTE_PATTERNS = [
     re.compile(r"@(?:app|router)\.(get|post|put|patch|delete)\(['\"]([^'\"]+)['\"]", re.I),
@@ -70,9 +71,9 @@ async def build_project_sync(project_id: UUID, db: AsyncSession) -> dict:
     )
     chunks = chunks_result.scalars().all()
 
-    content_by_file: dict[UUID, list[str]] = {}
+    content_by_file: dict[UUID, list[Chunk]] = {}
     for chunk in chunks:
-        content_by_file.setdefault(chunk.file_id, []).append(chunk.text)
+        content_by_file.setdefault(chunk.file_id, []).append(chunk)
 
     languages: Counter[str] = Counter()
     sync_files: list[dict] = []
@@ -83,7 +84,9 @@ async def build_project_sync(project_id: UUID, db: AsyncSession) -> dict:
 
     for file in files:
         parts = content_by_file.get(file.id, [])
-        content = "\n".join(parts) if parts else ""
+        # Chunks overlap by design; reconstructing by line prevents duplicate code
+        # from inflating file sizes, function counts, and API inventory.
+        content = rebuild_file_content(parts) if parts else ""
         size_bytes = len(content.encode("utf-8"))
         total_bytes += size_bytes
 
@@ -92,12 +95,13 @@ async def build_project_sync(project_id: UUID, db: AsyncSession) -> dict:
 
         function_count += _count_matches(FUNCTION_PATTERNS, content)
         class_count += _count_matches(CLASS_PATTERNS, content)
-        api_routes.extend(_extract_api_routes(content, file.filepath))
+        normalized_path = file.filepath.replace("\\", "/")
+        api_routes.extend(_extract_api_routes(content, normalized_path))
 
         sync_files.append(
             {
                 "filename": file.filename,
-                "filepath": file.filepath,
+                "filepath": normalized_path,
                 "language": file.language,
                 "content": content,
                 "size_bytes": size_bytes,

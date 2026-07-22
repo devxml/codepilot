@@ -1,10 +1,10 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import {
-  checkRepositoryLimit,
   uploadZipToAI,
   uploadGitHubToAI,
   getAIRepositorySync,
+  generateAIRepositoryReport,
   logActivity,
 } from "./ai.service";
 
@@ -44,8 +44,6 @@ export async function uploadZipRepository(
   });
   if (!workspace) throw new AppError(404, "Workspace not found");
 
-  await checkRepositoryLimit(userId);
-
   const repo = await prisma.repository.create({
     data: {
       workspaceId,
@@ -58,9 +56,11 @@ export async function uploadZipRepository(
   try {
     const result = await uploadZipToAI(file, projectName);
 
-    const updated = await synchronizeIndexedRepository(repo.id, result.project_id, result.status);
+    await synchronizeIndexedRepository(repo.id, result.project_id, result.status);
+    const report = await generateAIRepositoryReport(result.project_id);
+    const updated = await markRepositoryReady(repo.id, report.report);
 
-    await logActivity(userId, "repository.indexed", repo.id, { sourceType: "zip" });
+    await logActivity(userId, "repository.indexed", repo.id, { sourceType: "zip", reportGenerated: true });
     return updated;
   } catch (err) {
     const message = err instanceof AppError ? err.message : "Ingestion failed";
@@ -82,8 +82,6 @@ export async function uploadGitHubRepository(
   });
   if (!workspace) throw new AppError(404, "Workspace not found");
 
-  await checkRepositoryLimit(userId);
-
   const name =
     githubUrl.replace(/\/$/, "").split("/").pop()?.replace(".git", "") || "github-repo";
 
@@ -100,9 +98,11 @@ export async function uploadGitHubRepository(
   try {
     const result = await uploadGitHubToAI(githubUrl);
 
-    const updated = await synchronizeIndexedRepository(repo.id, result.project_id, result.status);
+    await synchronizeIndexedRepository(repo.id, result.project_id, result.status);
+    const report = await generateAIRepositoryReport(result.project_id);
+    const updated = await markRepositoryReady(repo.id, report.report);
 
-    await logActivity(userId, "repository.indexed", repo.id, { sourceType: "github", url: githubUrl });
+    await logActivity(userId, "repository.indexed", repo.id, { sourceType: "github", url: githubUrl, reportGenerated: true });
     return updated;
   } catch (err) {
     const message = err instanceof AppError ? err.message : "Ingestion failed";
@@ -161,7 +161,8 @@ async function synchronizeIndexedRepository(
       where: { id: repositoryId },
       data: {
         aiProjectId,
-        status: "ready",
+        // The initial report must be complete before chat is enabled.
+        status: "processing",
         fileCount: sync.file_count,
         functionCount: sync.function_count,
         classCount: sync.class_count,
@@ -172,6 +173,17 @@ async function synchronizeIndexedRepository(
         validationError: null,
       },
     });
+  });
+}
+
+async function markRepositoryReady(repositoryId: string, report: string) {
+  return prisma.repository.update({
+    where: { id: repositoryId },
+    data: {
+      status: "ready",
+      initialReport: report,
+      reportGeneratedAt: new Date(),
+    },
   });
 }
 

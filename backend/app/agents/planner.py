@@ -1,5 +1,4 @@
 from backend.app.agents.state import AgentState
-from backend.app.services.llm import generate_text
 
 PLANNER_PROMPT = """\
 You are a planning agent for an AI code analysis system.
@@ -28,15 +27,27 @@ def planner_node(state: AgentState) -> AgentState:
     status_updates = state.get("status_updates", [])
     status_updates.append("🧠 Planning which agents to run...")
 
-    decision = generate_text(
-        PLANNER_PROMPT.format(query=query),
-        max_tokens=32,
-        temperature=0.0,
-    ).lower()
+    # Routing is deterministic, so do not spend a model request deciding
+    # which agent to use. This removes a full network round trip per question.
+    security_terms = (
+        "security", "vulnerab", "secret", "api key", "password", "token",
+        "injection", "authentication", "authorization", "idor", "cors",
+    )
+    query_lower = query.lower()
+    asks_for_security = any(term in query_lower for term in security_terms)
+    asks_for_analysis = any(
+        term in query_lower
+        for term in (
+            "explain", "architecture", "database", "flow", "how", "what",
+            "where", "describe", "document",
+        )
+    )
 
-    valid_agents = {"code_analysis", "security"}
-    chosen = [a.strip() for a in decision.split(",") if a.strip() in valid_agents]
-    if not chosen:
+    if asks_for_security and asks_for_analysis:
+        chosen = ["code_analysis", "security"]
+    elif asks_for_security:
+        chosen = ["security"]
+    else:
         chosen = ["code_analysis"]
 
     state["planner_decision"] = ",".join(chosen)

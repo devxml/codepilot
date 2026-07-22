@@ -57,7 +57,7 @@ def security_node(state: AgentState) -> AgentState:
             query=state["query"],
             chunks=chunks_text,
         ),
-        max_tokens=900,
+        max_tokens=1400,
         temperature=0.1,
     )
 

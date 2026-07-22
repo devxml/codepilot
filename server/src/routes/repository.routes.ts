@@ -12,7 +12,7 @@ import {
 } from "../services/repository.service";
 
 const router = Router({ mergeParams: true });
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authenticate);
 

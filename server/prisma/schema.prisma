@@ -64,6 +64,8 @@ model Repository {
   functionCount   Int       @default(0) @map("function_count")
   classCount      Int       @default(0) @map("class_count")
   apiRouteCount   Int       @default(0) @map("api_route_count")
+  initialReport   String?   @db.Text @map("initial_report")
+  reportGeneratedAt DateTime? @map("report_generated_at")
   lastIndexedAt   DateTime? @map("last_indexed_at")
   validationError String?   @map("validation_error")
   localPath       String?   @map("local_path")

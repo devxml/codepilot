@@ -14,11 +14,21 @@ def retrieval_node(state: AgentState) -> AgentState:
     status_updates.append(f"🔍 Retrieving top {settings.RETRIEVAL_TOP_K} relevant code chunks...")
 
     query_vector = embed_query(query)
-    chunks = query_index(
+    vector_chunks = query_index(
         query_vector=query_vector,
         project_id=project_id,
         top_k=settings.RETRIEVAL_TOP_K,
     )
+
+    chunks = []
+    seen = set()
+    # Seeded chunks are deliberately representative of the whole repository, so
+    # keep them first when the caller supplied them for a broad question.
+    for chunk in state.get("retrieved_chunks", []) + vector_chunks:
+        key = (chunk.get("filepath"), chunk.get("start_line"), chunk.get("end_line"))
+        if key not in seen:
+            chunks.append(chunk)
+            seen.add(key)
 
     status_updates.append(f"✅ Retrieved {len(chunks)} chunks from {len(set(c['filepath'] for c in chunks))} files.")
     state["retrieved_chunks"] = chunks
@@ -33,7 +43,9 @@ def _trim_chunk_text(text: str, max_chars: int) -> str:
 
 
 def _prepare_chunks_for_prompt(chunks: list[dict]) -> list[dict]:
-    max_chunks = min(len(chunks), settings.RETRIEVAL_TOP_K)
+    # Broad questions may include a curated repository-wide seed in addition to
+    # semantic matches. The total-character guard below remains the hard limit.
+    max_chunks = len(chunks)
     trimmed = []
     total_chars = 0
 

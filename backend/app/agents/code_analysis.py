@@ -19,7 +19,10 @@ Answer the user's query using the code chunks above as your primary source of tr
 - Explain code logic, architecture, or data flow clearly.
 - Reference specific file names and line numbers when relevant.
 - Use markdown formatting in your response.
-- If the retrieved chunks don't fully answer the question, say so honestly.
+- Give a direct answer first. Never claim no code was provided if chunks are present.
+- For repository-wide questions, synthesize the folder and entry-point evidence across the supplied chunks; label inferences clearly.
+- If the retrieved chunks don't fully answer the question, state the precise gap rather than replacing the answer with a generic template.
+- Finish every sentence and provide a complete answer; never end mid-section or mid-sentence.
 
 Provide a thorough, well-structured code analysis response:
 """
@@ -46,7 +49,7 @@ def code_analysis_node(state: AgentState) -> AgentState:
             history=history_text,
             chunks=chunks_text,
         ),
-        max_tokens=900,
+        max_tokens=1400,
         temperature=0.2,
     )
 

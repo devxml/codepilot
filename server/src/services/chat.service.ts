@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
 import { Prisma } from "@prisma/client";
 import { AppError } from "../middleware/errorHandler";
-import { checkChatLimit, incrementChatUsage, streamChatFromAI } from "./ai.service";
+import { streamChatFromAI } from "./ai.service";
 
 export async function listChatSessions(userId: string, repositoryId: string) {
   const repo = await prisma.repository.findFirst({
@@ -89,8 +89,6 @@ export async function streamChat(
     throw new AppError(400, "Repository is not ready for chat");
   }
 
-  await checkChatLimit(userId);
-
   await prisma.chatMessage.create({
     data: { sessionId, role: "user", content: question },
   });
@@ -116,7 +114,6 @@ export async function streamChat(
         data: { updatedAt: new Date() },
       });
 
-      await incrementChatUsage(userId);
     },
   };
 }
