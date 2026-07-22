@@ -89,6 +89,8 @@ router.post("/:sessionId/stream", async (req: AuthRequest, res, next) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
 
     const reader = aiResponse.body!.getReader();
     const decoder = new TextDecoder();
@@ -104,7 +106,7 @@ router.post("/:sessionId/stream", async (req: AuthRequest, res, next) => {
       buffer += chunk;
       res.write(chunk);
 
-      const lines = buffer.split("\n\n");
+      const lines = buffer.split(/\r?\n\r?\n/);
       buffer = lines.pop() || "";
 
       for (const line of lines) {
