@@ -105,7 +105,21 @@ async def event_stream(
         return compiled_graph.invoke(initial_state)
 
     try:
-        final_state: AgentState = await loop.run_in_executor(None, run_graph)
+        final_state: AgentState = await asyncio.wait_for(
+            loop.run_in_executor(None, run_graph),
+            timeout=settings.CHAT_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        yield sse(
+            "error",
+            {
+                "message": (
+                    "The AI analysis timed out. Please try again; if it keeps "
+                    "happening, check the configured Gemini model and API key."
+                )
+            },
+        )
+        return
     except Exception as e:
         message = str(e)
         status_code = getattr(e, "status_code", None)
