@@ -29,7 +29,8 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      # Keep service credentials in the repository-level development env file.
+      - ./.env
     volumes:
       - ./backend:/app
       - /tmp/ai_copilot_uploads:/tmp/uploads

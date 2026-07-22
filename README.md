@@ -1,97 +1,125 @@
 # CodePilot
 
-CodePilot is an AI-assisted repository understanding platform. It lets users upload a GitHub repository or a ZIP archive, index the codebase, and ask natural-language questions about architecture, data flow, implementation details, and security. The product is built as a three-layer system: a modern Next.js frontend, an Express-based product API, and a Python/FastAPI AI service.
+> An AI-powered developer productivity platform for understanding unfamiliar codebases faster.
 
-## What is implemented
+CodePilot turns a GitHub repository or ZIP archive into a searchable, conversational workspace. Upload a project, let CodePilot index its code, then ask focused questions about architecture, data flow, data models, APIs, and security risks.
 
-The current repository includes a working MVP-style workflow for:
+## Overview
 
-- Repository ingestion from ZIP uploads or GitHub URLs
-- Project and workspace management for authenticated users
-- Repository indexing and metadata persistence in PostgreSQL
-- Semantic retrieval using sentence-transformers and Pinecone
-- Multi-agent analysis with planner, retrieval, code analysis, security, and report agents
-- Streaming chat responses over Server-Sent Events (SSE)
-- Subscription plan scaffolding and billing primitives on the server side
-- Docker-based local development for the full stack
+CodePilot combines a polished Next.js application, an Express product API, and a FastAPI AI service. The AI layer retrieves relevant source-code chunks, orchestrates specialized analysis, and streams Markdown responses back to the browser.
 
+## Features
+
+- Upload ZIP archives or import public GitHub repositories
+- Create workspaces and keep repositories and chat sessions organized
+- Index source files, functions, classes, languages, and API routes
+- Ask repository-aware questions in a streaming chat interface
+- Retrieve semantic code context with Pinecone and sentence-transformers
+- Generate architecture, implementation, and security analysis
+- Persist repository metadata, conversations, and user data in PostgreSQL
+- Run the complete stack locally with Docker Compose
+
+## Screenshots
+
+
+### Dashboard 
+![CodePilot dashboard placeholder](assets/dashboard-placeholder.png) 
+
+### Repository chat 
+![CodePilot chat placeholder](assets/chat-placeholder.png) 
+
+### Repository report
+![CodePilot chat placeholder](assets/report-placeholder.png) 
+
+
+## Tech Stack
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | Next.js 14, React, TypeScript, Tailwind CSS |
+| Product API | Node.js, Express, Prisma, JWT, Multer |
+| AI service | Python, FastAPI, LangGraph, Google Gemini |
+| Retrieval | Pinecone, sentence-transformers |
+| Data | PostgreSQL, SQLAlchemy, Prisma |
+| Delivery | Docker Compose |
 
 ## Architecture
 
-CodePilot is organized into three main layers:
-
-1. Frontend: Next.js and React for the user experience
-2. Server API: Express + Prisma + PostgreSQL for authentication, workspaces, repositories, chat sessions, and subscriptions
-3. AI service: FastAPI + LangGraph + Gemini + Pinecone + sentence-transformers for repository analysis and retrieval
-
-The request flow looks like this:
-
-- A repository is uploaded or linked from GitHub
-- The server stores repository metadata and forwards indexing work to the AI service
-- The AI service chunks the repository, generates embeddings, stores them in Pinecone, and prepares the repository for chat-based analysis
-- The frontend streams answers back to the user as the agent workflow runs
-
-## Tech stack
-
-- Frontend: Next.js 14, React, TypeScript, Tailwind CSS
-- Server API: Node.js, Express, Prisma, PostgreSQL, JWT, Multer
-- AI service: Python 3.12, FastAPI, LangGraph, Gemini 3.5 Flash, Pinecone, sentence-transformers
-- Containerization: Docker Compose
-
-## Repository structure
-
-```text
-codepilot/
-├── backend/                # FastAPI AI service
-│   └── app/
-│       ├── agents/         # Planner, retrieval, code analysis, security, report
-│       ├── api/            # Upload and chat endpoints
-│       ├── core/           # Shared settings
-│       ├── db/             # SQLAlchemy models and session setup
-│       └── services/       # Ingestion, chunking, embeddings, vector search, LLM
-├── frontend/               # Next.js application
-│   └── src/
-│       ├── app/            # Pages and app router routes
-│       ├── components/     # UI components for upload, chat, project selection, status
-│       ├── context/       # Auth context
-│       └── lib/            # API client helpers
-├── server/                 # Express API and Prisma schema
-│   ├── prisma/            # Database schema and seed data
-│   └── src/
-│       ├── routes/        # Auth, workspaces, repositories, chat, dashboard, subscriptions
-│       └── services/      # Business logic for the product API
-├── docker-compose.yml
-└── README.md
+```mermaid
+flowchart LR
+    U[Developer] --> F[Next.js frontend]
+    F -->|REST + SSE| A[Express API]
+    A --> P[(PostgreSQL)]
+    A -->|Ingestion and chat| AI[FastAPI AI service]
+    AI --> G[Gemini]
+    AI --> E[sentence-transformers]
+    AI --> V[(Pinecone)]
+    AI --> P
 ```
 
-## Local development
+### Repository ingestion and chat flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Next.js UI
+    participant API as Express API
+    participant AI as FastAPI AI Service
+    participant DB as PostgreSQL
+    participant Vector as Pinecone
+
+    User->>UI: Upload repository / ask question
+    UI->>API: Authenticated REST request
+    API->>AI: Forward repository or chat request
+    AI->>AI: Parse, chunk, and embed source code
+    AI->>Vector: Store or retrieve semantic chunks
+    AI->>DB: Save project and conversation data
+    AI-->>API: SSE status and answer chunks
+    API-->>UI: Stream response
+    UI-->>User: Render Markdown answer
+```
+
+## Installation
 
 ### Prerequisites
 
-- Node.js 20+
-- Python 3.12+
-- Docker Desktop (recommended for PostgreSQL and the full stack)
-- A Pinecone account and API key
+- Docker Desktop and Docker Compose, or Node.js 20+ and Python 3.12+
+- A PostgreSQL database
 - A Gemini API key
+- A Pinecone API key and index
 
-### Option 1: Run everything with Docker
+### Run with Docker (recommended)
+
+1. Clone the repository and create a root `.env` file:
+
+   ```env
+   GEMINI_API_KEY=your_gemini_key
+   GEMINI_MODEL=gemini-2.5-flash-lite
+   PINECONE_API_KEY=your_pinecone_key
+   PINECONE_INDEX_NAME=codepilot
+   JWT_SECRET=replace-with-a-long-random-string
+   ```
+
+2. Start the stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+3. Open `http://localhost:3000`.
+
+Services are available at:
+
+- Frontend: `http://localhost:3000`
+- Product API: `http://localhost:4000`
+- AI API and OpenAPI docs: `http://localhost:8000/docs`
+
+### Run locally
+
+Start PostgreSQL first, then run each service in a separate terminal.
 
 ```bash
-docker compose up --build
-```
-
-Once running:
-
-- Frontend: http://localhost:3000
-- Server API: http://localhost:4000
-- AI service: http://localhost:8000
-- API docs: http://localhost:8000/docs
-
-### Option 2: Run the services manually
-
-#### 1) Server API
-
-```bash
+# Product API
 cd server
 npm install
 npm run db:generate
@@ -100,60 +128,87 @@ npm run db:seed
 npm run dev
 ```
 
-Create a server environment file at server/.env with values such as:
-
-```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/ai_copilot
-JWT_SECRET=replace-me
-CORS_ORIGINS=http://localhost:3000
-AI_SERVICE_URL=http://localhost:8000
-```
-
-#### 2) AI service
-
 ```bash
+# AI service
 cd backend
 python -m venv .venv
-# On Windows PowerShell:
-# .\.venv\Scripts\Activate.ps1
-# On macOS/Linux:
-# source .venv/bin/activate
+# Windows: .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Create a backend environment file at backend/.env with values such as:
-
-```env
-DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/ai_copilot
-PINECONE_API_KEY=your-pinecone-api-key
-PINECONE_INDEX_NAME=code-copilot
-GEMINI_API_KEY=your-gemini-api-key
-CORS_ORIGINS=http://localhost:3000
-```
-
-#### 3) Frontend
-
 ```bash
+# Frontend
 cd frontend
 npm install
 npm run dev
 ```
 
-## How the product works
+Configure environment variables before starting services. Never commit API keys, database passwords, or JWT secrets.
 
-1. A user uploads a ZIP file or pastes a GitHub URL.
-2. The server stores the repository metadata and triggers indexing through the AI service.
-3. The AI service walks the repository, chunks its contents, generates embeddings, and stores them in Pinecone.
-4. The user can then ask questions such as:
-   - "Explain the overall architecture"
-   - "Find security vulnerabilities"
-   - "Describe the authentication flow"
-   - "Are there any hardcoded secrets?"
-5. The agent workflow retrieves relevant code chunks, analyzes them, and streams a response back to the UI.
+## Usage
 
-## Current status
+1. Register or sign in.
+2. Create a workspace.
+3. Upload a ZIP archive or import a GitHub URL.
+4. Wait for indexing to complete.
+5. Open the repository chat and ask questions such as:
 
-This repository currently contains a functional MVP-style implementation for repository ingestion, indexing, authentication, workspace management, chat, and AI-assisted analysis. It is suitable for local development and demos. Some production-hardening work remains as future work, including deeper background-job orchestration, expanded billing workflows, and stronger operational safeguards.
+   - `Explain the overall architecture of this codebase`
+   - `Describe the database schema and data models`
+   - `Trace the authentication flow`
+   - `Find potential security vulnerabilities`
 
+## API
+
+The Express API is served at `/api`; protected endpoints require a Bearer token.
+
+| Area | Example endpoint | Purpose |
+| --- | --- | --- |
+| Authentication | `POST /api/auth/login` | Authenticate a user and receive a JWT |
+| Workspaces | `GET /api/workspaces` | List the current user's workspaces |
+| Repositories | `POST /api/workspaces/:workspaceId/repositories/upload/zip` | Upload a repository archive |
+| Repositories | `POST /api/workspaces/:workspaceId/repositories/upload/github` | Import a GitHub repository |
+| Chat | `POST /api/workspaces/:workspaceId/repositories/:repositoryId/chats/:sessionId/stream` | Stream a repository-aware answer over SSE |
+| AI docs | `GET http://localhost:8000/docs` | Explore FastAPI endpoints interactively |
+
+Example chat request:
+
+```bash
+curl -N -X POST \
+  "http://localhost:4000/api/workspaces/<workspaceId>/repositories/<repositoryId>/chats/<sessionId>/stream" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Explain the authentication flow"}'
+```
+
+## Project Structure
+
+```text
+codepilot/
+├── assets/                 # README screenshots and visual assets
+├── backend/                # FastAPI AI service
+│   └── app/
+│       ├── agents/         # Retrieval, planning, analysis, reporting
+│       ├── api/            # Upload, report, and chat endpoints
+│       ├── db/             # SQLAlchemy models and sessions
+│       └── services/       # Ingestion, embeddings, vector search, LLM
+├── frontend/               # Next.js user interface
+│   └── src/
+│       ├── app/            # Pages and layouts
+│       ├── components/     # Chat, upload, and project UI
+│       └── lib/            # API client
+├── server/                 # Express product API
+│   ├── prisma/             # Prisma schema and migrations
+│   └── src/                # Routes, middleware, and services
+├── docker-compose.yml
+└── README.md
+```
+
+## Development Notes
+
+- Run `npm run build` from `frontend/` and `server/` before opening a pull request.
+- Use the FastAPI docs at `/docs` to inspect AI-service endpoints during development.
+- The project is designed for local development and portfolio demonstration; production deployments should add managed secrets, background jobs, rate limiting, observability, and hardened authorization policies.
 
